@@ -1,0 +1,167 @@
+/* Qayyem  -  supplementary styles on top of Bootstrap 5.
+   Theme-aware: Bootstrap's own tokens flip with [data-bs-theme], and the
+   project's navy/teal identity is redefined below for the dark theme rather
+   than reused unchanged, because the light navy merges into a dark page. */
+
+:root,
+[data-bs-theme="light"] {
+  --qayyem-navy: #1f3864;
+  --qayyem-teal: #0f766e;
+  --qayyem-nav-fg: #ffffff;
+}
+
+[data-bs-theme="dark"] {
+  /* Deeper navy so the bar still reads as a distinct surface against the dark
+     page background instead of blending into it. */
+  --qayyem-navy: #16233d;
+  /* The light teal fails contrast on dark, so lift it while keeping the hue. */
+  --qayyem-teal: #14b8a6;
+  --qayyem-nav-fg: #e9ecef;
+}
+
+.qayyem-nav {
+  background-color: var(--qayyem-navy);
+}
+
+.navbar-brand {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: var(--qayyem-teal);
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+[data-bs-theme="dark"] .brand-mark {
+  /* On the lifted teal, white text is the weaker pairing. */
+  color: #06201d;
+}
+
+/* The Arabic project name sits beside the Latin one, so it needs its own
+   line-height to avoid shifting the navbar baseline. */
+.brand-ar {
+  font-size: 1.05rem;
+  opacity: 0.75;
+  line-height: 1;
+}
+
+/* ---- Theme toggle ------------------------------------------------------- */
+
+.theme-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 0.5rem;
+  color: var(--qayyem-nav-fg);
+  background: transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+/* Show only the icon for the theme the button switches *to*, so the glyph
+   describes the action rather than the current state. */
+.theme-icon {
+  display: none;
+}
+
+[data-bs-theme="light"] .icon-moon,
+[data-bs-theme="dark"] .icon-sun {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle {
+    transition: none;
+  }
+}
+
+/* ---- Components --------------------------------------------------------- */
+
+.step-number {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--qayyem-navy);
+  color: var(--qayyem-nav-fg);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+[data-bs-theme="dark"] .step-number {
+  /* Against a dark card the deep navy disc disappears; the teal accent is the
+     readable choice here. */
+  background: var(--qayyem-teal);
+  color: #06201d;
+}
+
+.stat-card .stat-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.stat-card .stat-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--bs-secondary-color);
+}
+
+/* Table headers. Bootstrap's .table-light stays light in both themes, so the
+   header is driven from a theme token instead. */
+.table-head th {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-emphasis-color);
+  border-bottom-color: var(--bs-border-color);
+  font-weight: 600;
+}
+
+/* A quiet informational panel. Replaces .alert-light, which does not adapt.
+   Uses --bs-body-bg, not --bs-tertiary-bg: <body> is already tertiary, so a
+   tertiary panel would be invisible against the page and only its border would
+   show. This matches the raised surface the cards above it use. */
+.note-panel {
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  color: var(--bs-body-color);
+  padding: 0.75rem 1rem;
+}
+
+/* Arabic feedback. A slightly larger size and looser line-height keep Arabic
+   script legible at body size, and the explicit direction stops it rendering
+   left-aligned inside an otherwise English table. */
+.feedback-ar {
+  font-size: 1.02rem;
+  line-height: 1.85;
+  text-align: right;
+  max-width: 62ch;
+  margin-inline-start: auto;
+}
+
+.table > :not(caption) > * > * {
+  padding-block: 0.7rem;
+}
+
+code {
+  font-size: 0.85em;
+}

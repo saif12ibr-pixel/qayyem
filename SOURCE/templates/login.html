@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Sign in &mdash; Qayyem{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-1">Instructor sign in</h1>
+        <p class="text-body-secondary small mb-4">
+          Accounts are created by the system administrator.
+        </p>
+
+        <form method="post" novalidate>
+          <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email"
+                   required autofocus autocomplete="username">
+          </div>
+          <div class="mb-4">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password"
+                   required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">Sign in</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

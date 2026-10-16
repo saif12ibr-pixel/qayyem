@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} &mdash; Qayyem{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 text-center py-5">
+    <div class="display-4 fw-bold text-body-secondary">{{ code }}</div>
+    <p class="lead">{{ message }}</p>
+    <a href="{{ url_for('upload.new') }}" class="btn btn-primary">Back to Qayyem</a>
+  </div>
+</div>
+{% endblock %}

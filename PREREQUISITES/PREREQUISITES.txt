@@ -1,0 +1,57 @@
+QAYYEM - PREREQUISITES
+======================
+
+REQUIRED
+--------
+
+1. Python 3.12 or later
+   https://www.python.org/downloads/
+   During installation, tick "Add python.exe to PATH".
+
+   Note: the "python" that ships with Windows from the Microsoft Store is only a
+   placeholder and will not run this project. Install from python.org.
+
+2. A Google AI Studio API key (free, no payment card required)
+   https://aistudio.google.com/apikey
+   Paste it into SOURCE/.env as GEMINI_API_KEY.
+
+3. A modern web browser
+   Chrome, Firefox, Edge or Safari.
+
+4. Internet access
+   Needed only while grading, because the AI model runs as a cloud service.
+
+
+INSTALLED AUTOMATICALLY
+-----------------------
+
+These are fetched by run.bat (or by "pip install -r requirements.txt") and do
+not need to be installed by hand:
+
+   Flask 3.0.3          web framework
+   pandas 2.2.2         CSV and Excel parsing
+   openpyxl 3.1.5       Excel file generation
+   requests 2.32.3      HTTP client for the AI API
+   python-dotenv 1.0.1  reads configuration from .env
+   pytest 8.3.2         test runner
+
+
+NOT REQUIRED
+------------
+
+   No database server. The project uses SQLite, a single file, created
+   automatically at SOURCE/instance/qayyem.sqlite3.
+
+   No Node.js, npm or build step. The interface is server-rendered and loads
+   Bootstrap from a CDN.
+
+
+TESTED ON
+---------
+
+   Windows 11 Pro (10.0.26200)
+   Python 3.12.10
+   AMD Ryzen 7 5700X, 16 GB RAM
+
+   The test suite runs fully offline and needs neither an API key nor internet
+   access.

@@ -1,0 +1,43 @@
+IDEAL ANSWER (paste into the "Ideal answer" box)
+================================================
+
+التمثيل الضوئي هو العملية التي تحول بها النباتات الخضراء الطاقة الضوئية إلى طاقة
+كيميائية مخزنة في الجلوكوز. تحدث هذه العملية في البلاستيدات الخضراء بمساعدة صبغة
+الكلوروفيل، وتستخدم الماء وثاني أكسيد الكربون كمواد أولية، وتنتج الجلوكوز والأكسجين.
+
+
+RUBRIC (paste into the "Grading rubric" box)
+============================================
+
+Award marks out of 10 as follows:
+- 3 marks: correctly states that light energy is converted into chemical energy.
+- 3 marks: names the inputs (water and carbon dioxide) and the outputs
+  (glucose and oxygen).
+- 2 marks: identifies where it happens (chloroplasts) or the role of chlorophyll.
+- 2 marks: clarity and correct scientific expression in Arabic.
+
+Deduct marks for factual errors such as confusing photosynthesis with respiration.
+
+
+QUESTION PUT TO THE STUDENTS
+============================
+
+اشرح عملية التمثيل الضوئي، مع ذكر مدخلاتها ومخرجاتها ومكان حدوثها.
+("Explain the process of photosynthesis, stating its inputs, outputs and where
+it takes place.")
+
+
+NOTES ON THE SAMPLE DATA
+========================
+
+sample_responses.csv contains 12 responses chosen to span the grading range, so
+a demonstration shows more than one outcome:
+
+  S220001, S220004, S220006, S220009, S220011  strong answers
+  S220002, S220003, S220012                    partial answers
+  S220005, S220007, S220008                    weak or incorrect answers
+  S220008                                      a factual error (confuses it
+                                               with respiration)
+  S220010                                      deliberately blank, to show the
+                                               automatic zero and default
+                                               Arabic message (UC-3 alt. 2)

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  {#
+    Set the theme before anything paints, otherwise a light frame flashes before
+    a dark theme applies. This has to be inline and synchronous, so it cannot
+    move to style.css or a separate script file.
+  #}
+  <script>
+    (function () {
+      var KEY = 'qayyem-theme';
+      var stored = null;
+      try { stored = localStorage.getItem(KEY); } catch (e) { /* private mode */ }
+      var media = window.matchMedia('(prefers-color-scheme: dark)');
+      function apply(theme) {
+        document.documentElement.setAttribute('data-bs-theme', theme);
+      }
+      apply(stored || (media.matches ? 'dark' : 'light'));
+
+      // With no explicit choice saved, keep following the operating system.
+      media.addEventListener('change', function (event) {
+        var choice = null;
+        try { choice = localStorage.getItem(KEY); } catch (e) { /* ignore */ }
+        if (!choice) { apply(event.matches ? 'dark' : 'light'); }
+      });
+    })();
+  </script>
+
+  <title>{% block title %}Qayyem{% endblock %}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+</head>
+<body class="bg-body-tertiary">
+
+<nav class="navbar navbar-expand-lg navbar-dark qayyem-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('upload.new') }}">
+      <span class="brand-mark" aria-hidden="true">&#10003;</span>
+      <span>Qayyem <span class="brand-ar" dir="rtl">&#1602;&#1610;&#1617;&#1605;</span></span>
+    </a>
+
+    <div class="d-flex align-items-center gap-3">
+      {% if g.instructor %}
+        <a class="nav-link text-white-50" href="{{ url_for('upload.new') }}">New grading</a>
+        <a class="nav-link text-white-50" href="{{ url_for('results.index') }}">
+          Results
+          {% if pending_exports %}
+            <span class="badge text-bg-warning">{{ pending_exports }}</span>
+          {% endif %}
+        </a>
+        <a class="nav-link text-white-50" href="{{ url_for('settings.index') }}">Settings</a>
+        <span class="navbar-text small text-white-50 d-none d-md-inline">
+          {{ g.instructor['full_name'] or g.instructor['email'] }}
+        </span>
+      {% endif %}
+
+      <button type="button" class="btn btn-sm theme-toggle" id="theme-toggle">
+        <svg class="theme-icon icon-sun" width="16" height="16" viewBox="0 0 16 16"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" aria-hidden="true">
+          <circle cx="8" cy="8" r="3.1"/>
+          <path d="M8 .9v1.7M8 13.4v1.7M.9 8h1.7M13.4 8h1.7M2.98 2.98l1.2 1.2M11.82 11.82l1.2 1.2M13.02 2.98l-1.2 1.2M4.18 11.82l-1.2 1.2"/>
+        </svg>
+        <svg class="theme-icon icon-moon" width="16" height="16" viewBox="0 0 16 16"
+             fill="none" stroke="currentColor" stroke-width="1.5"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M13.3 9.8A5.7 5.7 0 0 1 6.2 2.7a5.8 5.8 0 1 0 7.1 7.1Z"/>
+        </svg>
+      </button>
+
+      {% if g.instructor %}
+        <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+          {% if pending_exports %}
+            <input type="hidden" name="confirm" value="1">
+            <button class="btn btn-sm btn-warning"
+                    onclick="return confirm('You have {{ pending_exports }} graded result set(s) you have not downloaded. Signing out permanently deletes them. Continue?')">
+              Sign out and delete
+            </button>
+          {% else %}
+            <button class="btn btn-sm btn-outline-light">Sign out</button>
+          {% endif %}
+        </form>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<main class="container py-4">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="container py-4 text-center text-body-secondary small">
+  Qayyem &mdash; College of Computing &amp; Informatics, Saudi Electronic University
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var button = document.getElementById('theme-toggle');
+
+    function describe() {
+      var isDark = root.getAttribute('data-bs-theme') === 'dark';
+      var text = isDark ? 'Switch to light theme' : 'Switch to dark theme';
+      button.setAttribute('aria-label', text);
+      button.setAttribute('title', text);
+    }
+
+    describe();
+
+    button.addEventListener('click', function () {
+      var next = root.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-bs-theme', next);
+      try { localStorage.setItem('qayyem-theme', next); } catch (e) { /* private mode */ }
+      describe();
+    });
+  })();
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

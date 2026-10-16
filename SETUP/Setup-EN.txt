@@ -1,0 +1,161 @@
+QAYYEM - SETUP INSTRUCTIONS (ENGLISH)
+=====================================
+
+Qayyem is a web application that grades short Arabic assignment answers using
+AI and writes individual Arabic feedback for each student.
+
+
+BEFORE YOU START
+----------------
+
+Read PREREQUISITES/PREREQUISITES.txt. You need two things:
+
+  1. Python 3.12 installed from python.org (tick "Add python.exe to PATH")
+  2. A free API key from https://aistudio.google.com/apikey
+
+
+OPTION A - THE EASY WAY (WINDOWS)
+---------------------------------
+
+  1. Open the SOURCE folder.
+  2. Double-click run.bat
+  3. The first run creates a file called .env and then stops.
+     Open SOURCE\.env in Notepad and paste your key after GEMINI_API_KEY=
+     so the line reads, for example:
+
+         GEMINI_API_KEY=AIzaSy...your-key-here
+
+     Save and close the file.
+  4. Double-click run.bat again.
+  5. It will ask you to create your instructor login. Enter an email address
+     and a password of at least 8 characters.
+  6. Open http://127.0.0.1:5000 in your browser and sign in.
+
+  To stop the server, press Ctrl+C in the black window.
+  To start it again later, just double-click run.bat.
+
+
+OPTION B - MANUAL SETUP (ANY OPERATING SYSTEM)
+----------------------------------------------
+
+Open a terminal in the SOURCE folder and run:
+
+  1. Create and activate a virtual environment:
+
+         python -m venv .venv
+         .venv\Scripts\activate          (Windows)
+         source .venv/bin/activate       (macOS / Linux)
+
+  2. Install the dependencies:
+
+         pip install -r requirements.txt
+
+  3. Create the configuration file and add your key:
+
+         copy .env.example .env          (Windows)
+         cp .env.example .env            (macOS / Linux)
+
+     Then edit .env and set GEMINI_API_KEY to your key.
+
+  4. Create the database:
+
+         flask --app app init-db
+
+  5. Create your instructor account:
+
+         flask --app app create-instructor
+
+  6. Start the server:
+
+         flask --app app run
+
+  7. Open http://127.0.0.1:5000
+
+
+USING THE APPLICATION
+---------------------
+
+  1. Sign in with the account you created.
+
+  2. Prepare a CSV or Excel file with two columns: a student ID column and a
+     response column. English or Arabic headings both work:
+
+         student_id,response              or      الرقم الجامعي,الإجابة
+         S220001,الإجابة الأولى...                  S220001,الإجابة الأولى...
+
+     A ready-made example is in SOURCE/sample_data/sample_responses.csv
+
+  3. Upload the file, paste the ideal answer, and optionally a grading rubric.
+     Supplying a rubric noticeably improves consistency, so it is worth a
+     sentence or two. Set the maximum score, then click "Grade responses".
+
+  4. A progress bar appears while grading runs. The page updates itself.
+
+  5. When it finishes, review the scores and Arabic feedback in the table, then
+     click "Download Excel" to save the results.
+
+     The Excel file has two sheets: "Results" (one row per student) and
+     "Assignment" (the ideal answer, rubric, averages and the model used).
+
+
+IMPORTANT - STUDENT DATA IS NOT KEPT
+------------------------------------
+
+Student responses and grades are deleted when you sign out or when your session
+expires after 30 minutes of inactivity. This is deliberate, to comply with the
+Saudi Personal Data Protection Law.
+
+  ==> ALWAYS DOWNLOAD THE EXCEL FILE BEFORE SIGNING OUT.
+
+If you try to sign out with results you have not downloaded, the application
+warns you first.
+
+
+RUNNING THE TESTS
+-----------------
+
+      python -m pytest
+
+All 65 tests run offline and need no API key and no internet connection.
+
+
+TROUBLESHOOTING
+---------------
+
+"Python is not installed, or only the Microsoft Store placeholder is"
+      Install Python from python.org, not from the Microsoft Store, and tick
+      "Add python.exe to PATH" during setup.
+
+"GEMINI_API_KEY is not set"
+      Open SOURCE\.env and paste your key after GEMINI_API_KEY=
+
+"API rejected the key (400/401/403)"
+      The key is wrong or has been revoked. Generate a new one at
+      https://aistudio.google.com/apikey
+
+"Model ... was not found"
+      Your key cannot use that model. Open .env and change GEMINI_MODEL to a
+      model your account has access to.
+
+"Rate limited by the API (429)"
+      The free tier has an hourly request limit. Wait a few minutes, or lower
+      GRADING_BATCH_SIZE in .env so fewer, larger calls are made.
+
+"Could not find a response column"
+      The column headings were not recognised. Rename them to student_id and
+      response, or to الرقم الجامعي and الإجابة.
+
+Arabic appears as meaningless symbols in your CSV
+      Re-save the file from Excel as "CSV UTF-8 (Comma delimited)".
+
+The port is already in use
+      Another program is using port 5000. Start on a different port:
+
+         flask --app app run --port 5055
+
+
+SUPPORT
+-------
+
+Qayyem - Senior Project II (CS489)
+College of Computing & Informatics, Saudi Electronic University, Riyadh

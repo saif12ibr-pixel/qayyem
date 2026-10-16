@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Results &mdash; Qayyem{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Grading sessions</h1>
+  <a href="{{ url_for('upload.new') }}" class="btn btn-primary btn-sm">New grading</a>
+</div>
+
+{% if not assignments %}
+  <div class="card shadow-sm">
+    <div class="card-body text-center py-5">
+      <p class="mb-3 text-body-secondary">You have not graded anything in this session.</p>
+      <a href="{{ url_for('upload.new') }}" class="btn btn-primary">Grade an assignment</a>
+    </div>
+  </div>
+{% else %}
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-head">
+          <tr>
+            <th>File</th>
+            <th class="text-center" style="width: 7rem;">Responses</th>
+            <th style="width: 11rem;">Status</th>
+            <th style="width: 12rem;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in assignments %}
+            <tr>
+              <td>
+                <a href="{{ url_for('results.detail', assignment_id=a['id']) }}">{{ a['title'] }}</a>
+                <div class="small text-body-secondary">{{ a['created_at'] }}</div>
+              </td>
+              <td class="text-center">{{ a['response_count'] }}</td>
+              <td>
+                {% if a['status'] == 'complete' %}
+                  <span class="badge text-bg-success">Complete</span>
+                  {% if not a['exported_at'] %}
+                    <span class="badge text-bg-warning">Not downloaded</span>
+                  {% endif %}
+                {% elif a['status'] == 'failed' %}
+                  <span class="badge text-bg-danger">Failed</span>
+                {% else %}
+                  <span class="badge text-bg-info">
+                    Grading {{ a['progress_done'] }}/{{ a['progress_total'] }}
+                  </span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if a['status'] == 'complete' %}
+                  <a class="btn btn-sm btn-outline-success"
+                     href="{{ url_for('results.export', assignment_id=a['id']) }}">Download Excel</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="form-text mt-3">
+    These are deleted when you sign out or your session expires (data-retention
+    requirement). Download anything you need to keep.
+  </p>
+{% endif %}
+{% endblock %}

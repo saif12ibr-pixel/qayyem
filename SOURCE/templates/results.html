@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Results &mdash; Qayyem{% endblock %}
+
+{% block content %}
+{% set running = assignment['status'] in ('pending', 'grading') %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-1">{{ assignment['title'] }}</h1>
+    <p class="text-body-secondary small mb-0">
+      Graded {{ assignment['created_at'] }} &middot; out of {{ assignment['max_score'] }}
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('upload.new') }}" class="btn btn-outline-secondary btn-sm">New grading</a>
+    {% if assignment['status'] == 'complete' %}
+      <a href="{{ url_for('results.export', assignment_id=assignment['id']) }}"
+         class="btn btn-success btn-sm">Download Excel</a>
+    {% else %}
+      <button class="btn btn-success btn-sm" disabled>Download Excel</button>
+    {% endif %}
+  </div>
+</div>
+
+{% if running %}
+  <div class="card shadow-sm mb-4" id="progress-card">
+    <div class="card-body">
+      <div class="d-flex align-items-center gap-3 mb-2">
+        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+        <strong id="progress-label">
+          Grading {{ assignment['progress_done'] }} of {{ assignment['progress_total'] }}&hellip;
+        </strong>
+      </div>
+      <div class="progress" role="progressbar" aria-label="Grading progress">
+        <div class="progress-bar progress-bar-striped progress-bar-animated"
+             id="progress-bar" style="width: 0%"></div>
+      </div>
+      <p class="form-text mb-0">You can leave this page open; it updates itself.</p>
+    </div>
+  </div>
+{% endif %}
+
+{% if assignment['status'] == 'failed' %}
+  <div class="alert alert-danger">
+    <strong>Grading failed.</strong>
+    {{ assignment['error_message'] or 'An unexpected error occurred.' }}
+    <div class="small mt-2">Your uploaded responses were kept.</div>
+  </div>
+{% endif %}
+
+{% if assignment['status'] == 'complete' %}
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card stat-card h-100"><div class="card-body">
+        <div class="stat-value">{{ summary.total }}</div>
+        <div class="stat-label">Responses</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card h-100"><div class="card-body">
+        <div class="stat-value">{{ summary.graded }}</div>
+        <div class="stat-label">Graded</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card h-100"><div class="card-body">
+        <div class="stat-value">{{ summary.average if summary.average is not none else '&mdash;'|safe }}</div>
+        <div class="stat-label">Average</div>
+      </div></div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card stat-card h-100"><div class="card-body">
+        <div class="stat-value {% if summary.failed %}text-danger{% endif %}">{{ summary.failed }}</div>
+        <div class="stat-label">Needs attention</div>
+      </div></div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-head">
+        <tr>
+          <th style="width: 10rem;">Student ID</th>
+          <th style="width: 6rem;" class="text-center">Score</th>
+          <th>Feedback</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="font-monospace small">{{ row['student_id'] }}</td>
+            <td class="text-center">
+              {% if row['score'] is not none %}
+                <span class="fw-semibold">{{ row['score'] }}</span>
+                <span class="text-body-secondary small">/ {{ assignment['max_score'] }}</span>
+              {% else %}
+                <span class="text-body-secondary">&mdash;</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if row['feedback_ar'] %}
+                <div dir="rtl" lang="ar" class="feedback-ar">{{ row['feedback_ar'] }}</div>
+              {% elif not row['error'] %}
+                <span class="text-body-secondary small">Awaiting grading&hellip;</span>
+              {% endif %}
+              {% if row['error'] %}
+                <div class="small text-danger mt-1">{{ row['error'] }}</div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if running %}
+<script>
+  // UC-3 requires a processing indicator while grading runs. Grading happens on
+  // a worker thread, so the page polls for progress rather than blocking.
+  const statusUrl = "{{ url_for('results.status', assignment_id=assignment['id']) }}";
+  const bar = document.getElementById('progress-bar');
+  const label = document.getElementById('progress-label');
+
+  async function poll() {
+    try {
+      const response = await fetch(statusUrl, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) { setTimeout(poll, 3000); return; }
+      const data = await response.json();
+
+      const total = data.total || 0;
+      const done = data.done || 0;
+      const percent = total ? Math.round((done / total) * 100) : 0;
+      bar.style.width = percent + '%';
+      label.textContent = 'Grading ' + done + ' of ' + total + '…';
+
+      if (data.status === 'complete' || data.status === 'failed') {
+        window.location.reload();
+        return;
+      }
+    } catch (error) {
+      // Transient network blip: keep polling rather than stalling the page.
+    }
+    setTimeout(poll, 1500);
+  }
+  poll();
+</script>
+{% endif %}
+{% endblock %}

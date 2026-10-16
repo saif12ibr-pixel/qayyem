@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block title %}Settings &mdash; Qayyem{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+
+    <h1 class="h4 mb-1">Grading settings</h1>
+    <p class="text-body-secondary small mb-4">
+      Choose which AI service grades your assignments, and use your own account
+      if you prefer.
+    </p>
+
+    {% if key_unreadable %}
+      <div class="alert alert-warning">
+        A key is stored but cannot be read, which happens when the server's
+        <code>SECRET_KEY</code> changes after a key is saved. Enter your key again.
+      </div>
+    {% endif %}
+
+    <form method="post">
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <label class="form-label fw-semibold">AI provider</label>
+
+          {% for p in providers %}
+            <div class="form-check mb-2">
+              <input class="form-check-input" type="radio" name="provider"
+                     id="provider-{{ p.name }}" value="{{ p.name }}"
+                     data-default-model="{{ default_models[p.name] }}"
+                     {% if current_provider == p.name %}checked{% endif %}>
+              <label class="form-check-label" for="provider-{{ p.name }}">
+                {{ p.title }}
+                <span class="d-block text-body-secondary small">{{ p.note }}</span>
+              </label>
+            </div>
+          {% endfor %}
+
+          {# Shown for whichever provider is selected, so the trade-off is read
+             before a class is uploaded rather than found out during grading. #}
+          {% for p in providers %}
+            <div class="alert alert-warning small mt-3 mb-0 provider-warning"
+                 data-provider="{{ p.name }}"
+                 {% if current_provider != p.name %}style="display:none"{% endif %}>
+              <strong>{{ p.title }}:</strong> {{ p.warning }}
+            </div>
+          {% endfor %}
+
+          <div class="mt-3" style="max-width: 26rem;">
+            <label for="model-select" class="form-label fw-semibold">Model</label>
+
+            <div class="d-flex gap-2">
+              <select class="form-select" id="model-select">
+                <!-- Options are filled in by script from the data below, so the
+                     list always matches the provider that is selected. -->
+              </select>
+              <button type="submit" name="action" value="refresh_models"
+                      class="btn btn-outline-secondary flex-shrink-0"
+                      title="Ask your provider which models this key can use">
+                Refresh
+              </button>
+            </div>
+
+            <!-- Holds whatever the select resolves to, including a typed value,
+                 so the server receives one field either way. -->
+            <input type="hidden" id="model" name="model" value="{{ current_model }}">
+
+            <input type="text" class="form-control mt-2 d-none" id="model-custom"
+                   placeholder="Type a model name" value="{{ current_model }}">
+
+            <div class="form-text">
+              {% if models_are_live %}
+                Showing the models your key can actually use.
+              {% else %}
+                Common choices shown. Press <strong>Refresh</strong> to list the
+                models your own key can use &mdash; that way a mistyped name
+                cannot fail halfway through grading a class.
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <label for="api_key" class="form-label fw-semibold">Your API key</label>
+
+          {% if has_own_key %}
+            <p class="small mb-2">
+              Currently using your own key:
+              <code>{{ masked_key }}</code>
+            </p>
+          {% elif server_key_available %}
+            <p class="small text-body-secondary mb-2">
+              No key of your own. Grading uses the key this server was set up with.
+            </p>
+          {% else %}
+            <p class="small text-danger mb-2">
+              No key is set here and the server has none either, so grading will
+              fail until you add one.
+            </p>
+          {% endif %}
+
+          <input type="password" class="form-control" id="api_key" name="api_key"
+                 autocomplete="off" placeholder="{% if has_own_key %}Leave blank to keep your saved key{% else %}Paste your key{% endif %}">
+          <div class="form-text">
+            Stored encrypted and never shown again. Gemini keys come from
+            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>
+            (free); OpenAI keys from
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>
+            (paid).
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" name="action" value="save" class="btn btn-primary">
+          Save settings
+        </button>
+        {% if has_own_key %}
+          <button type="submit" name="action" value="clear_key"
+                  class="btn btn-outline-danger"
+                  onclick="return confirm('Remove your saved API key? Grading will fall back to the server key.')">
+            Remove my key
+          </button>
+        {% endif %}
+      </div>
+    </form>
+
+    <hr class="my-4">
+
+    <form method="post" action="{{ url_for('settings.test_connection') }}">
+      <button type="submit" class="btn btn-outline-secondary">Test connection</button>
+      <span class="form-text ms-2">
+        Grades one sample answer so you find problems now, not halfway through a class.
+      </span>
+    </form>
+
+    <div class="note-panel small mt-4">
+      <strong>Your key is yours.</strong> It is encrypted before being saved and
+      is never sent back to this page or included in any export. Usage is billed
+      to whichever account the key belongs to.
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  var MODELS = {{ model_choices | tojson }};
+  var DEFAULTS = {{ default_models | tojson }};
+  var CURRENT = {{ current_model | tojson }};
+
+  var select = document.getElementById('model-select');
+  var hidden = document.getElementById('model');
+  var custom = document.getElementById('model-custom');
+
+  function selectedProvider() {
+    var checked = document.querySelector('input[name="provider"]:checked');
+    return checked ? checked.value : 'gemini';
+  }
+
+  // Rebuild the list for the chosen provider. An "Other" entry stays available
+  // because providers release models faster than any list here can follow, and
+  // an instructor should never be blocked from entering a name we don't know.
+  function fillModels(preferred) {
+    var provider = selectedProvider();
+    var options = (MODELS[provider] || []).slice();
+    var want = preferred || DEFAULTS[provider] || options[0] || '';
+
+    if (want && options.indexOf(want) === -1) { options.unshift(want); }
+
+    select.innerHTML = '';
+    options.forEach(function (name) {
+      var opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      if (name === want) { opt.selected = true; }
+      select.appendChild(opt);
+    });
+
+    var other = document.createElement('option');
+    other.value = '__other__';
+    other.textContent = 'Other (type a name)…';
+    select.appendChild(other);
+
+    sync();
+  }
+
+  function sync() {
+    if (select.value === '__other__') {
+      custom.classList.remove('d-none');
+      hidden.value = custom.value.trim();
+    } else {
+      custom.classList.add('d-none');
+      hidden.value = select.value;
+    }
+  }
+
+  select.addEventListener('change', sync);
+  custom.addEventListener('input', sync);
+
+  function showWarning() {
+    var provider = selectedProvider();
+    document.querySelectorAll('.provider-warning').forEach(function (box) {
+      box.style.display = (box.dataset.provider === provider) ? '' : 'none';
+    });
+  }
+
+  document.querySelectorAll('input[name="provider"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      fillModels(null);
+      showWarning();
+    });
+  });
+
+  fillModels(CURRENT);
+</script>
+{% endblock %}
