@@ -13,7 +13,7 @@ from datetime import timedelta
 from flask import Flask, render_template
 
 from config import Config
-from qayyem import auth, db, results, settings, upload
+from qayyem import auth, db, results, security, settings, upload
 
 
 def create_app(test_config=None):
@@ -36,11 +36,17 @@ def create_app(test_config=None):
     app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
 
     db.register(app)
+    security.register(app)
     db.ensure_schema_current(app.config["DATABASE"])
     app.register_blueprint(auth.bp)
     app.register_blueprint(upload.bp)
     app.register_blueprint(results.bp)
     app.register_blueprint(settings.bp)
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return render_template("error.html", code=400,
+                               message=error.description), 400
 
     @app.errorhandler(404)
     def not_found(error):  # noqa: ARG001

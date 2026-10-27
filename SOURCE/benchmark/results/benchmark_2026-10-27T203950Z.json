@@ -1,0 +1,51 @@
+{
+  "run_at_utc": "2026-10-27T203950Z",
+  "batch_size": 10,
+  "target": "100 responses in 120 s",
+  "runs": [
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 10,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.55,
+      "size": 10,
+      "seconds": 4.1,
+      "per_response": 0.41
+    },
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 50,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.57,
+      "size": 50,
+      "seconds": 18.3,
+      "per_response": 0.37
+    },
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 100,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.55,
+      "size": 100,
+      "seconds": 37.3,
+      "per_response": 0.37
+    },
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 200,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.45,
+      "size": 200,
+      "seconds": 74.0,
+      "per_response": 0.37
+    }
+  ]
+}

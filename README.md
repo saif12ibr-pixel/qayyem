@@ -2,7 +2,7 @@
 
 **AI-Powered Arabic Assignment Grading and Feedback System**
 
-Senior Project II (CS489) — College of Computing & Informatics, Saudi Electronic University, Riyadh.
+Senior Project II (CS489) — College of Computing & Informatics, Saudi Electronic University, Dammam.
 Supervisor: Dr. Saeed AlQarni.
 
 Instructors upload a CSV or Excel file of short Arabic student answers along with an

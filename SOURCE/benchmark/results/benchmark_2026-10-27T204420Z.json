@@ -1,0 +1,35 @@
+{
+  "run_at_utc": "2026-10-27T204420Z",
+  "batch_size": 10,
+  "target": "100 responses in 120 s",
+  "runs": [
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 100,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.54,
+      "identical_scores": 2,
+      "repeated_answers": 12,
+      "max_spread": 2.0,
+      "size": 100,
+      "seconds": 33.1,
+      "per_response": 0.33
+    },
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 200,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.42,
+      "identical_scores": 2,
+      "repeated_answers": 12,
+      "max_spread": 2.0,
+      "size": 200,
+      "seconds": 71.0,
+      "per_response": 0.35
+    }
+  ]
+}

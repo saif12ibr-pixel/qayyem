@@ -1,0 +1,63 @@
+{
+  "run_at_utc": "2026-10-27T204215Z",
+  "batch_size": 10,
+  "target": "100 responses in 120 s",
+  "runs": [
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 10,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.3,
+      "identical_scores": 0,
+      "repeated_answers": 0,
+      "max_spread": null,
+      "size": 10,
+      "seconds": 3.5,
+      "per_response": 0.35
+    },
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 50,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.56,
+      "identical_scores": 4,
+      "repeated_answers": 12,
+      "max_spread": 2.0,
+      "size": 50,
+      "seconds": 16.9,
+      "per_response": 0.34
+    },
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 100,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.61,
+      "identical_scores": 2,
+      "repeated_answers": 12,
+      "max_spread": 2.0,
+      "size": 100,
+      "seconds": 34.0,
+      "per_response": 0.34
+    },
+    {
+      "status": "complete",
+      "error": null,
+      "graded": 200,
+      "failed": 0,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.43,
+      "identical_scores": 2,
+      "repeated_answers": 12,
+      "max_spread": 2.0,
+      "size": 200,
+      "seconds": 74.6,
+      "per_response": 0.37
+    }
+  ]
+}

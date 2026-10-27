@@ -33,4 +33,8 @@ class Config:
     GRADING_BATCH_SIZE = _int("GRADING_BATCH_SIZE", 10)
     MAX_ROWS = _int("MAX_ROWS", 500)
 
+    CSRF_ENABLED = True
+    LOGIN_MAX_ATTEMPTS = _int("LOGIN_MAX_ATTEMPTS", 5)
+    LOGIN_LOCKOUT_MINUTES = _int("LOGIN_LOCKOUT_MINUTES", 15)
+
     DATABASE = os.environ.get("DATABASE")  # set by app factory when None

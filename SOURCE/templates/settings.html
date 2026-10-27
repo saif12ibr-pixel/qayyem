@@ -19,6 +19,7 @@
     {% endif %}
 
     <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <label class="form-label fw-semibold">AI provider</label>
@@ -130,6 +131,7 @@
     <hr class="my-4">
 
     <form method="post" action="{{ url_for('settings.test_connection') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit" class="btn btn-outline-secondary">Test connection</button>
       <span class="form-text ms-2">
         Grades one sample answer so you find problems now, not halfway through a class.

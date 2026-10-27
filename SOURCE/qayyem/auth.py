@@ -24,6 +24,7 @@ from flask import (
 )
 from werkzeug.security import check_password_hash
 
+from . import security
 from .db import get_db, purge_instructor_data
 
 bp = Blueprint("auth", __name__)
@@ -122,6 +123,17 @@ def login():
         email = (request.form.get("email") or "").strip().lower()
         password = request.form.get("password") or ""
 
+        throttle = security.throttle()
+        key = security.client_key()
+        max_attempts = int(current_app.config.get("LOGIN_MAX_ATTEMPTS", 5))
+        window = 60 * int(current_app.config.get("LOGIN_LOCKOUT_MINUTES", 15))
+        wait = throttle.retry_after(key, max_attempts, window)
+        if wait:
+            minutes = (wait + 59) // 60
+            flash("Too many failed sign-in attempts. Try again in "
+                  + str(minutes) + " minute(s).", "danger")
+            return render_template("login.html"), 429
+
         row = get_db().execute(
             "SELECT * FROM instructor WHERE email = ?", (email,)
         ).fetchone()
@@ -129,8 +141,10 @@ def login():
         # One message for both branches, so the form cannot be used to discover
         # which email addresses have accounts.
         if row is None or not check_password_hash(row["password_hash"], password):
+            throttle.record_failure(key)
             flash("Incorrect email or password.", "danger")
         else:
+            throttle.reset(key)
             session.clear()
             session.permanent = True
             session[USER_ID] = row["id"]

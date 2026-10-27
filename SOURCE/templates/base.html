@@ -73,6 +73,7 @@
 
       {% if g.instructor %}
         <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           {% if pending_exports %}
             <input type="hidden" name="confirm" value="1">
             <button class="btn btn-sm btn-warning"

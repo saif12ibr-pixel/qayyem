@@ -1,0 +1,21 @@
+{
+  "run_at_utc": "2026-10-27T204501Z",
+  "batch_size": 1,
+  "target": "100 responses in 120 s",
+  "runs": [
+    {
+      "status": "failed",
+      "error": "The AI provider refused further requests because the account's rate limit or quota was reached. Grading stopped rather than retrying, which would only use more of the allowance. Your uploaded responses were kept -- wait for the quota to reset, or use a key with a higher limit, then grade again. Provider said: Rate limited by the API (429). {\n  \"error\": {\n    \"code\": 429,\n    \"message\": \"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to:",
+      "graded": 20,
+      "failed": 1,
+      "model": "gemini-flash-lite-latest",
+      "mean_score": 4.25,
+      "identical_scores": 7,
+      "repeated_answers": 8,
+      "max_spread": 1.0,
+      "size": 24,
+      "seconds": 26.2,
+      "per_response": 1.09
+    }
+  ]
+}

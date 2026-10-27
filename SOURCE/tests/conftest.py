@@ -33,6 +33,8 @@ def app():
             "GRADING_BATCH_SIZE": 3,
             "MAX_ROWS": 500,
             "SESSION_TIMEOUT_MINUTES": 30,
+            # Most tests exercise behaviour, not CSRF; test_security turns it on.
+            "CSRF_ENABLED": False,
         }
     )
 

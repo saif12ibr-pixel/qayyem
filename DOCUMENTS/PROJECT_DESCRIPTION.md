@@ -3,7 +3,7 @@
 **AI-Powered Arabic Assignment Grading and Feedback System**
 
 Senior Project II (CS489) — continuation of Senior Project I (CS479)
-College of Computing & Informatics, Saudi Electronic University, Riyadh
+College of Computing & Informatics, Saudi Electronic University, Dammam
 
 ## Team
 
