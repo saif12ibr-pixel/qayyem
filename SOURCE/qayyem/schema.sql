@@ -8,6 +8,7 @@ PRAGMA foreign_keys = ON;
 
 DROP TABLE IF EXISTS grading_result;
 DROP TABLE IF EXISTS student_response;
+DROP TABLE IF EXISTS question;
 DROP TABLE IF EXISTS assignment;
 DROP TABLE IF EXISTS instructor;
 
@@ -32,6 +33,8 @@ CREATE TABLE assignment (
     ideal_answer   TEXT NOT NULL,
     rubric         TEXT,
     max_score      REAL NOT NULL DEFAULT 10,
+    -- Marking scheme as JSON [{"name", "marks"}], when marked in parts.
+    parts          TEXT,
     status         TEXT NOT NULL DEFAULT 'pending'
                    CHECK (status IN ('pending','grading','complete','failed')),
     progress_done  INTEGER NOT NULL DEFAULT 0,
@@ -41,9 +44,24 @@ CREATE TABLE assignment (
     created_at     TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- One row per answer column of a multi-question file. A single-question
+-- upload has none and keeps its ideal answer, rubric and max score on
+-- `assignment`. ideal_answer stays NULL until the instructor fills it in.
+CREATE TABLE question (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    assignment_id INTEGER NOT NULL REFERENCES assignment(id) ON DELETE CASCADE,
+    position      INTEGER NOT NULL,
+    title         TEXT NOT NULL,
+    ideal_answer  TEXT,
+    rubric        TEXT,
+    max_score     REAL NOT NULL DEFAULT 10,
+    parts         TEXT
+);
+
 CREATE TABLE student_response (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     assignment_id INTEGER NOT NULL REFERENCES assignment(id) ON DELETE CASCADE,
+    question_id   INTEGER REFERENCES question(id) ON DELETE CASCADE,
     student_id    TEXT NOT NULL,
     response_text TEXT,
     row_number    INTEGER NOT NULL
@@ -57,8 +75,11 @@ CREATE TABLE grading_result (
     feedback_ar TEXT,
     model_name  TEXT,
     error       TEXT,
+    -- JSON list of per-part scores, in the marking scheme's order.
+    part_scores TEXT,
     graded_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_assignment_instructor ON assignment(instructor_id);
 CREATE INDEX idx_response_assignment   ON student_response(assignment_id);
+CREATE INDEX idx_question_assignment   ON question(assignment_id);

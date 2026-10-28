@@ -1,20 +1,18 @@
 {% extends "base.html" %}
-{% block title %}Settings &mdash; Qayyem{% endblock %}
+{% block title %}{{ _('Settings') }} &mdash; {{ _('Qayyem') }}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-lg-8">
 
-    <h1 class="h4 mb-1">Grading settings</h1>
+    <h1 class="h4 mb-1">{{ _('Grading settings') }}</h1>
     <p class="text-body-secondary small mb-4">
-      Choose which AI service grades your assignments, and use your own account
-      if you prefer.
+      {{ _('Choose which AI service grades your assignments, and use your own account if you prefer.') }}
     </p>
 
     {% if key_unreadable %}
       <div class="alert alert-warning">
-        A key is stored but cannot be read, which happens when the server's
-        <code>SECRET_KEY</code> changes after a key is saved. Enter your key again.
+        {{ _('A key is stored but cannot be read, which happens when the server&#39;s <code>SECRET_KEY</code> changes after a key is saved. Enter your key again.') }}
       </div>
     {% endif %}
 
@@ -22,7 +20,7 @@
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <label class="form-label fw-semibold">AI provider</label>
+          <label class="form-label fw-semibold">{{ _('AI provider') }}</label>
 
           {% for p in providers %}
             <div class="form-check mb-2">
@@ -32,7 +30,7 @@
                      {% if current_provider == p.name %}checked{% endif %}>
               <label class="form-check-label" for="provider-{{ p.name }}">
                 {{ p.title }}
-                <span class="d-block text-body-secondary small">{{ p.note }}</span>
+                <span class="d-block text-body-secondary small">{{ p.note|translate }}</span>
               </label>
             </div>
           {% endfor %}
@@ -43,12 +41,12 @@
             <div class="alert alert-warning small mt-3 mb-0 provider-warning"
                  data-provider="{{ p.name }}"
                  {% if current_provider != p.name %}style="display:none"{% endif %}>
-              <strong>{{ p.title }}:</strong> {{ p.warning }}
+              <strong>{{ p.title }}:</strong> {{ p.warning|translate }}
             </div>
           {% endfor %}
 
           <div class="mt-3" style="max-width: 26rem;">
-            <label for="model-select" class="form-label fw-semibold">Model</label>
+            <label for="model-select" class="form-label fw-semibold">{{ _('Model') }}</label>
 
             <div class="d-flex gap-2">
               <select class="form-select" id="model-select">
@@ -57,8 +55,8 @@
               </select>
               <button type="submit" name="action" value="refresh_models"
                       class="btn btn-outline-secondary flex-shrink-0"
-                      title="Ask your provider which models this key can use">
-                Refresh
+                      title="{{ _('Ask your provider which models this key can use') }}">
+                {{ _('Refresh') }}
               </button>
             </div>
 
@@ -67,15 +65,13 @@
             <input type="hidden" id="model" name="model" value="{{ current_model }}">
 
             <input type="text" class="form-control mt-2 d-none" id="model-custom"
-                   placeholder="Type a model name" value="{{ current_model }}">
+                   placeholder="{{ _('Type a model name') }}" value="{{ current_model }}">
 
             <div class="form-text">
               {% if models_are_live %}
-                Showing the models your key can actually use.
+                {{ _('Showing the models your key can actually use.') }}
               {% else %}
-                Common choices shown. Press <strong>Refresh</strong> to list the
-                models your own key can use &mdash; that way a mistyped name
-                cannot fail halfway through grading a class.
+                {{ _('Common choices shown. Press <strong>Refresh</strong> to list the models your own key can use &mdash; that way a mistyped name cannot fail halfway through grading a class.') }}
               {% endif %}
             </div>
           </div>
@@ -84,45 +80,40 @@
 
       <div class="card shadow-sm mb-3">
         <div class="card-body">
-          <label for="api_key" class="form-label fw-semibold">Your API key</label>
+          <label for="api_key" class="form-label fw-semibold">{{ _('Your API key') }}</label>
 
           {% if has_own_key %}
             <p class="small mb-2">
-              Currently using your own key:
+              {{ _('Currently using your own key:') }}
               <code>{{ masked_key }}</code>
             </p>
           {% elif server_key_available %}
             <p class="small text-body-secondary mb-2">
-              No key of your own. Grading uses the key this server was set up with.
+              {{ _('No key of your own. Grading uses the key this server was set up with.') }}
             </p>
           {% else %}
             <p class="small text-danger mb-2">
-              No key is set here and the server has none either, so grading will
-              fail until you add one.
+              {{ _('No key is set here and the server has none either, so grading will fail until you add one.') }}
             </p>
           {% endif %}
 
           <input type="password" class="form-control" id="api_key" name="api_key"
-                 autocomplete="off" placeholder="{% if has_own_key %}Leave blank to keep your saved key{% else %}Paste your key{% endif %}">
+                 autocomplete="off" placeholder="{% if has_own_key %}{{ _('Leave blank to keep your saved key') }}{% else %}{{ _('Paste your key') }}{% endif %}">
           <div class="form-text">
-            Stored encrypted and never shown again. Gemini keys come from
-            <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>
-            (free); OpenAI keys from
-            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>
-            (paid).
+            {{ _('Stored encrypted and never shown again. Gemini keys come from <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (free); OpenAI keys from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a> (paid).') }}
           </div>
         </div>
       </div>
 
       <div class="d-flex gap-2">
         <button type="submit" name="action" value="save" class="btn btn-primary">
-          Save settings
+          {{ _('Save settings') }}
         </button>
         {% if has_own_key %}
           <button type="submit" name="action" value="clear_key"
                   class="btn btn-outline-danger"
-                  onclick="return confirm('Remove your saved API key? Grading will fall back to the server key.')">
-            Remove my key
+                  onclick="return confirm({{ _('Remove your saved API key? Grading will fall back to the server key.')|string|tojson|forceescape }})">
+            {{ _('Remove my key') }}
           </button>
         {% endif %}
       </div>
@@ -132,16 +123,14 @@
 
     <form method="post" action="{{ url_for('settings.test_connection') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <button type="submit" class="btn btn-outline-secondary">Test connection</button>
+      <button type="submit" class="btn btn-outline-secondary">{{ _('Test connection') }}</button>
       <span class="form-text ms-2">
-        Grades one sample answer so you find problems now, not halfway through a class.
+        {{ _('Grades one sample answer so you find problems now, not halfway through a class.') }}
       </span>
     </form>
 
     <div class="note-panel small mt-4">
-      <strong>Your key is yours.</strong> It is encrypted before being saved and
-      is never sent back to this page or included in any export. Usage is billed
-      to whichever account the key belongs to.
+      {{ _('<strong>Your key is yours.</strong> It is encrypted before being saved and is never sent back to this page or included in any export. Usage is billed to whichever account the key belongs to.') }}
     </div>
 
   </div>
@@ -184,7 +173,7 @@
 
     var other = document.createElement('option');
     other.value = '__other__';
-    other.textContent = 'Other (type a name)…';
+    other.textContent = {{ _('Other (type a name)…')|string|tojson }};
     select.appendChild(other);
 
     sync();

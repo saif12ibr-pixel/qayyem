@@ -44,16 +44,16 @@ class OpenAIGrader(Grader):
         self.name = model
         self._session = session or requests.Session()
 
-    def grade_batch(self, items, ideal_answer, rubric, max_score):
+    def grade_batch(self, items, ideal_answer, rubric, max_score, parts=None):
         if not items:
             return []
-        prompt = build_prompt(items, ideal_answer, rubric, max_score)
+        prompt = build_prompt(items, ideal_answer, rubric, max_score, parts)
         text = self._generate(prompt)
         try:
             parsed = json.loads(text)
         except json.JSONDecodeError as exc:
             raise GraderError("Model did not return valid JSON: " + str(exc)) from exc
-        return validate_results(parsed, [i.student_id for i in items], max_score)
+        return validate_results(parsed, [i.student_id for i in items], max_score, parts)
 
     def _generate(self, prompt):
         """POST the prompt, retrying transient failures with backoff."""

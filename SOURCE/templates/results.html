@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Results &mdash; Qayyem{% endblock %}
+{% block title %}{{ _('Results') }} &mdash; {{ _('Qayyem') }}{% endblock %}
 
 {% block content %}
 {% set running = assignment['status'] in ('pending', 'grading') %}
@@ -8,16 +8,16 @@
   <div>
     <h1 class="h4 mb-1">{{ assignment['title'] }}</h1>
     <p class="text-body-secondary small mb-0">
-      Graded {{ assignment['created_at'] }} &middot; out of {{ assignment['max_score'] }}
+      {{ _('Graded %(when)s &middot; out of %(max)s', when=assignment['created_at'], max=assignment['max_score']) }}
     </p>
   </div>
   <div class="d-flex gap-2">
-    <a href="{{ url_for('upload.new') }}" class="btn btn-outline-secondary btn-sm">New grading</a>
+    <a href="{{ url_for('upload.new') }}" class="btn btn-outline-secondary btn-sm">{{ _('New grading') }}</a>
     {% if assignment['status'] == 'complete' %}
       <a href="{{ url_for('results.export', assignment_id=assignment['id']) }}"
-         class="btn btn-success btn-sm">Download Excel</a>
+         class="btn btn-success btn-sm">{{ _('Download Excel') }}</a>
     {% else %}
-      <button class="btn btn-success btn-sm" disabled>Download Excel</button>
+      <button class="btn btn-success btn-sm" disabled>{{ _('Download Excel') }}</button>
     {% endif %}
   </div>
 </div>
@@ -28,23 +28,23 @@
       <div class="d-flex align-items-center gap-3 mb-2">
         <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
         <strong id="progress-label">
-          Grading {{ assignment['progress_done'] }} of {{ assignment['progress_total'] }}&hellip;
+          {{ _('Grading %(done)s of %(total)s&hellip;', done=assignment['progress_done'], total=assignment['progress_total']) }}
         </strong>
       </div>
-      <div class="progress" role="progressbar" aria-label="Grading progress">
+      <div class="progress" role="progressbar" aria-label="{{ _('Grading progress') }}">
         <div class="progress-bar progress-bar-striped progress-bar-animated"
              id="progress-bar" style="width: 0%"></div>
       </div>
-      <p class="form-text mb-0">You can leave this page open; it updates itself.</p>
+      <p class="form-text mb-0">{{ _('You can leave this page open; it updates itself.') }}</p>
     </div>
   </div>
 {% endif %}
 
 {% if assignment['status'] == 'failed' %}
   <div class="alert alert-danger">
-    <strong>Grading failed.</strong>
-    {{ assignment['error_message'] or 'An unexpected error occurred.' }}
-    <div class="small mt-2">Your uploaded responses were kept.</div>
+    <strong>{{ _('Grading failed.') }}</strong>
+    {{ (assignment['error_message'] or 'An unexpected error occurred.')|translate }}
+    <div class="small mt-2">{{ _('Your uploaded responses were kept.') }}</div>
   </div>
 {% endif %}
 
@@ -53,38 +53,119 @@
     <div class="col-6 col-md-3">
       <div class="card stat-card h-100"><div class="card-body">
         <div class="stat-value">{{ summary.total }}</div>
-        <div class="stat-label">Responses</div>
+        <div class="stat-label">{{ _('Students') if questions else _('Responses') }}</div>
       </div></div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card stat-card h-100"><div class="card-body">
         <div class="stat-value">{{ summary.graded }}</div>
-        <div class="stat-label">Graded</div>
+        <div class="stat-label">{{ _('Graded') }}</div>
       </div></div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card stat-card h-100"><div class="card-body">
         <div class="stat-value">{{ summary.average if summary.average is not none else '&mdash;'|safe }}</div>
-        <div class="stat-label">Average</div>
+        <div class="stat-label">{{ _('Average') }}</div>
       </div></div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card stat-card h-100"><div class="card-body">
         <div class="stat-value {% if summary.failed %}text-danger{% endif %}">{{ summary.failed }}</div>
-        <div class="stat-label">Needs attention</div>
+        <div class="stat-label">{{ _('Needs attention') }}</div>
       </div></div>
     </div>
   </div>
 {% endif %}
 
+{% if questions %}
+{# An exam: per-question scores and a total per student, then the feedback. #}
+<div class="card shadow-sm mb-4">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-head">
+        <tr>
+          <th style="width: 10rem;">{{ _('Student ID') }}</th>
+          {% for q in questions %}
+            <th class="text-center" dir="auto">
+              {{ _('Q%(n)s', n=q['position']) }}
+              <div class="small fw-normal">/ {{ q['max_score'] }}</div>
+            </th>
+          {% endfor %}
+          <th class="text-center">
+            {{ _('Total') }}
+            <div class="small fw-normal">/ {{ assignment['max_score'] }}</div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in students %}
+          <tr>
+            <td class="font-monospace small">{{ s['student_id'] }}</td>
+            {% for a in s['answers'] %}
+              <td class="text-center {% if a['error'] %}text-danger{% endif %}">
+                {{ a['score'] if a['score'] is not none else '&mdash;'|safe }}
+              </td>
+            {% endfor %}
+            <td class="text-center fw-semibold">
+              {{ s['total'] if s['total'] is not none else '&mdash;'|safe }}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2 class="h6 mb-2">{{ _('Feedback') }}</h2>
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table align-middle mb-0">
+      <tbody>
+        {% for s in students %}
+          <tr class="student-group">
+            <td colspan="3" class="font-monospace small fw-semibold">{{ s['student_id'] }}</td>
+          </tr>
+          {% for a in s['answers'] %}
+            {% set q = questions[loop.index0] %}
+            <tr>
+              <td style="width: 10rem;" class="small" dir="auto">{{ _('Q%(n)s', n=q['position']) }} &middot; {{ q['title'] }}</td>
+              <td style="width: 6rem;" class="text-center">
+                {% if a['score'] is not none %}
+                  <span class="fw-semibold">{{ a['score'] }}</span>
+                  <span class="text-body-secondary small">/ {{ q['max_score'] }}</span>
+                {% else %}
+                  <span class="text-body-secondary">&mdash;</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if a['breakdown'] %}
+                  <div class="small text-body-secondary mb-1" dir="auto">{{ a['breakdown']|breakdown }}</div>
+                {% endif %}
+                {% if a['feedback_ar'] %}
+                  <div dir="rtl" lang="ar" class="feedback-ar">{{ a['feedback_ar'] }}</div>
+                {% elif not a['error'] %}
+                  <span class="text-body-secondary small">{{ _('Awaiting grading&hellip;') }}</span>
+                {% endif %}
+                {% if a['error'] %}
+                  <div class="small text-danger mt-1">{{ a['error']|translate }}</div>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
 <div class="card shadow-sm">
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
       <thead class="table-head">
         <tr>
-          <th style="width: 10rem;">Student ID</th>
-          <th style="width: 6rem;" class="text-center">Score</th>
-          <th>Feedback</th>
+          <th style="width: 10rem;">{{ _('Student ID') }}</th>
+          <th style="width: 6rem;" class="text-center">{{ _('Score') }}</th>
+          <th>{{ _('Feedback') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -100,13 +181,16 @@
               {% endif %}
             </td>
             <td>
+              {% if row['breakdown'] %}
+                <div class="small text-body-secondary mb-1" dir="auto">{{ row['breakdown']|breakdown }}</div>
+              {% endif %}
               {% if row['feedback_ar'] %}
                 <div dir="rtl" lang="ar" class="feedback-ar">{{ row['feedback_ar'] }}</div>
               {% elif not row['error'] %}
-                <span class="text-body-secondary small">Awaiting grading&hellip;</span>
+                <span class="text-body-secondary small">{{ _('Awaiting grading&hellip;') }}</span>
               {% endif %}
               {% if row['error'] %}
-                <div class="small text-danger mt-1">{{ row['error'] }}</div>
+                <div class="small text-danger mt-1">{{ row['error']|translate }}</div>
               {% endif %}
             </td>
           </tr>
@@ -115,6 +199,7 @@
     </table>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -136,7 +221,8 @@
       const done = data.done || 0;
       const percent = total ? Math.round((done / total) * 100) : 0;
       bar.style.width = percent + '%';
-      label.textContent = 'Grading ' + done + ' of ' + total + '…';
+      label.textContent = {{ _('Grading %(done)s of %(total)s&hellip;', done='{done}', total='{total}')|string|tojson }}
+        .replace('&hellip;', '…').replace('{done}', done).replace('{total}', total);
 
       if (data.status === 'complete' || data.status === 'failed') {
         window.location.reload();

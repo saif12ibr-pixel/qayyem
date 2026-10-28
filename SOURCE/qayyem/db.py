@@ -64,6 +64,41 @@ def ensure_schema_current(database_path):
         ):
             if column not in existing:
                 conn.execute(ddl)
+
+        # Multi-question support: the question table and the link to it.
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS question (
+                   id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                   assignment_id INTEGER NOT NULL REFERENCES assignment(id) ON DELETE CASCADE,
+                   position      INTEGER NOT NULL,
+                   title         TEXT NOT NULL,
+                   ideal_answer  TEXT,
+                   rubric        TEXT,
+                   max_score     REAL NOT NULL DEFAULT 10,
+                   parts         TEXT
+               )"""
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_question_assignment ON question(assignment_id)"
+        )
+        response_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(student_response)")
+        }
+        if "question_id" not in response_columns:
+            conn.execute(
+                "ALTER TABLE student_response ADD COLUMN question_id "
+                "INTEGER REFERENCES question(id) ON DELETE CASCADE"
+            )
+
+        # Marking in parts.
+        for table, column in (
+            ("assignment", "parts"),
+            ("question", "parts"),
+            ("grading_result", "part_scores"),
+        ):
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(" + table + ")")}
+            if columns and column not in columns:
+                conn.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " TEXT")
         conn.commit()
     finally:
         conn.close()

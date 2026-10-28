@@ -44,18 +44,26 @@ def _words(text):
 class FakeGrader(Grader):
     name = "fake-offline-grader"
 
-    def grade_batch(self, items, ideal_answer, rubric, max_score):
+    def grade_batch(self, items, ideal_answer, rubric, max_score, parts=None):
         ideal = _words(ideal_answer)
         results = []
         for item in items:
             answer = _words(item.response_text)
             overlap = len(ideal & answer) / len(ideal) if ideal else 0.0
-            score = round(overlap * float(max_score), 2)
+            part_scores = None
+            if parts:
+                # The same overlap applied to each part, so the parts sum to
+                # what the whole question would have scored.
+                part_scores = tuple(round(overlap * float(p["marks"]), 2) for p in parts)
+                score = round(sum(part_scores), 2)
+            else:
+                score = round(overlap * float(max_score), 2)
             if overlap >= 0.7:
                 feedback = _STRONG
             elif overlap >= 0.3:
                 feedback = _PARTIAL
             else:
                 feedback = _WEAK
-            results.append(GradeResult(item.student_id, score, feedback))
+            results.append(GradeResult(item.student_id, score, feedback,
+                                       part_scores=part_scores))
         return results

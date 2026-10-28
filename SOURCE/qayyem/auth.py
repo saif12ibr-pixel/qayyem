@@ -26,6 +26,7 @@ from werkzeug.security import check_password_hash
 
 from . import security
 from .db import get_db, purge_instructor_data
+from .i18n import gettext as _
 
 bp = Blueprint("auth", __name__)
 
@@ -61,7 +62,7 @@ def load_instructor():
                 # an explicit logout does.
                 _purge(instructor_id)
                 session.clear()
-                flash("Your session expired after inactivity. Please sign in again.", "warning")
+                flash(_("Your session expired after inactivity. Please sign in again."), "warning")
                 return
 
     row = get_db().execute(
@@ -130,8 +131,8 @@ def login():
         wait = throttle.retry_after(key, max_attempts, window)
         if wait:
             minutes = (wait + 59) // 60
-            flash("Too many failed sign-in attempts. Try again in "
-                  + str(minutes) + " minute(s).", "danger")
+            flash(_("Too many failed sign-in attempts. Try again in %(minutes)s minute(s).",
+                    minutes=minutes), "danger")
             return render_template("login.html"), 429
 
         row = get_db().execute(
@@ -142,7 +143,7 @@ def login():
         # which email addresses have accounts.
         if row is None or not check_password_hash(row["password_hash"], password):
             throttle.record_failure(key)
-            flash("Incorrect email or password.", "danger")
+            flash(_("Incorrect email or password."), "danger")
         else:
             throttle.reset(key)
             session.clear()
@@ -171,14 +172,14 @@ def logout():
 
     if pending and not request.form.get("confirm"):
         flash(
-            "You have " + str(pending) + " graded result set(s) you have not "
-            "downloaded, and signing out deletes them. Download them first, or "
-            "use “Sign out and delete” to go ahead.",
+            _("You have %(count)s graded result set(s) you have not downloaded, and "
+              "signing out deletes them. Download them first, or use “Sign out and "
+              "delete” to go ahead.", count=pending),
             "warning",
         )
         return redirect(url_for("results.index"))
 
     _purge(instructor_id)
     session.clear()
-    flash("You have been signed out and the student data was deleted.", "success")
+    flash(_("You have been signed out and the student data was deleted."), "success")
     return redirect(url_for("auth.login"))

@@ -165,3 +165,30 @@
 code {
   font-size: 0.85em;
 }
+
+/* Arabic interface. Bootstrap's RTL build mirrors the layout; these cover the
+   project's own rules and give Arabic text a typeface designed for it. */
+html[lang="ar"] body {
+  font-family: "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+}
+
+[dir="rtl"] .feedback-ar {
+  margin-inline-start: 0;
+}
+
+.lang-toggle {
+  color: var(--qayyem-nav-fg);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.lang-toggle:hover,
+.lang-toggle:focus-visible {
+  color: var(--qayyem-nav-fg);
+  border-color: rgba(255, 255, 255, 0.7);
+}
+
+/* Per-student header rows in an exam's feedback table; Bootstrap's
+   .table-light would stay white in the dark theme. */
+.table > tbody > tr.student-group > td {
+  background-color: var(--bs-secondary-bg);
+}

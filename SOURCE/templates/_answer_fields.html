@@ -1,0 +1,71 @@
+{#
+  Fields shared by the single-question upload page (suffix "") and each
+  question on the exam set-up page (suffix "_<question id>"). The names carry
+  the suffix so one form can hold many questions. static/answer-fields.js
+  makes them interactive; without it every input simply stays visible.
+#}
+
+{% macro ideal_answer(suffix, form, file_help) %}
+  {% set source = form.get('ideal_source' ~ suffix) or 'text' %}
+  <div data-ideal-group>
+    <div class="btn-group btn-group-sm mb-3" role="group" aria-label="{{ _('Ideal answer source') }}">
+      {% for value, label in (('text', _('Typed answer')), ('file', _('Book or slides')), ('both', _('Both'))) %}
+        <input type="radio" class="btn-check" name="ideal_source{{ suffix }}"
+               id="ideal_source{{ suffix }}_{{ value }}" value="{{ value }}"
+               {% if source == value %}checked{% endif %}>
+        <label class="btn btn-outline-primary" for="ideal_source{{ suffix }}_{{ value }}">{{ label }}</label>
+      {% endfor %}
+    </div>
+
+    <div data-ideal-typed {% if source == 'file' %}hidden{% endif %}>
+      <textarea class="form-control" id="ideal_answer{{ suffix }}" name="ideal_answer{{ suffix }}"
+                rows="4" dir="auto" aria-label="{{ _('Ideal answer') }}">{{ form.get('ideal_answer' ~ suffix, '') }}</textarea>
+      <div class="form-text">{{ _('The model answer every response is compared against.') }}</div>
+    </div>
+
+    <div data-ideal-file class="mt-2" {% if source == 'text' %}hidden{% endif %}>
+      <label for="reference{{ suffix }}" class="form-label fw-semibold">{{ _('Book or slides') }}</label>
+      <input type="file" class="form-control" id="reference{{ suffix }}" name="reference{{ suffix }}"
+             accept=".pdf,.pptx,.docx,.txt">
+      <div class="form-text">{{ file_help }}</div>
+    </div>
+  </div>
+{% endmacro %}
+
+
+{% macro parts(suffix, form, max_input_id) %}
+  {% set rows = form.get('parts' ~ suffix) or [] %}
+  <div class="mt-3" data-parts data-max-input="{{ max_input_id }}">
+    <div class="d-flex align-items-baseline gap-2">
+      <span class="form-label fw-semibold mb-0">{{ _('Marks split into parts') }}</span>
+      <span class="text-body-secondary small">{{ _('(optional)') }}</span>
+    </div>
+    <div class="form-text mb-2">
+      {{ _('For a question marked in parts, e.g. 4 marks for the definition and 6 for an example. Each part is scored separately and the maximum score becomes their sum.') }}
+    </div>
+
+    <div data-part-rows>
+      {% for name, marks in rows %}
+        {{ part_row(suffix, name, marks) }}
+      {% endfor %}
+    </div>
+    <template data-part-template>{{ part_row(suffix, '', '') }}</template>
+
+    <button type="button" class="btn btn-sm btn-outline-secondary" data-add-part>
+      + {{ _('Add part') }}
+    </button>
+  </div>
+{% endmacro %}
+
+
+{% macro part_row(suffix, name, marks) %}
+  <div class="d-flex gap-2 mb-2" data-part-row>
+    <input type="text" class="form-control" name="part_name{{ suffix }}" value="{{ name }}"
+           dir="auto" placeholder="{{ _('Part, e.g. Definition') }}" aria-label="{{ _('Part name') }}">
+    <input type="number" class="form-control part-marks" name="part_marks{{ suffix }}" value="{{ marks }}"
+           min="0.5" step="0.5" style="max-width: 7rem;"
+           placeholder="{{ _('Marks') }}" aria-label="{{ _('Marks') }}">
+    <button type="button" class="btn btn-outline-danger" data-remove-part
+            aria-label="{{ _('Remove part') }}" title="{{ _('Remove part') }}">&times;</button>
+  </div>
+{% endmacro %}

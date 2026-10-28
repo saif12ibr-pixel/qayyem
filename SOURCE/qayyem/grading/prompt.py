@@ -21,6 +21,8 @@ RESPONSE_SCHEMA = {
         "properties": {
             "student_id": {"type": "STRING"},
             "score": {"type": "NUMBER"},
+            # Only filled when the question is marked in parts.
+            "part_scores": {"type": "ARRAY", "items": {"type": "NUMBER"}},
             "feedback_ar": {"type": "STRING"},
         },
         "required": ["student_id", "score", "feedback_ar"],
@@ -37,8 +39,17 @@ EMPTY_RESPONSE_FEEDBACK = (
 )
 
 
+def _marking_scheme(parts):
+    lines = [
+        "{0}. {1} -- {2:g} marks".format(n, p["name"], float(p["marks"]))
+        for n, p in enumerate(parts, start=1)
+    ]
+    return "\n".join(lines)
+
+
 def build_prompt(
-    items: list[ResponseItem], ideal_answer: str, rubric: str, max_score: float
+    items: list[ResponseItem], ideal_answer: str, rubric: str, max_score: float,
+    parts: list | None = None,
 ) -> str:
     """Build one prompt that grades every item in the batch."""
     payload = [
@@ -50,6 +61,22 @@ def build_prompt(
         "completeness against the ideal answer, and clarity of expression."
     )
 
+    parts_text = ""
+    parts_instruction = ""
+    if parts:
+        # Marking in parts is what lets the instructor see where marks were
+        # lost; the model scores each part and the total is their sum.
+        parts_text = (
+            "\nMARKING SCHEME (the maximum score is split into these parts):\n"
+            + _marking_scheme(parts) + "\n"
+        )
+        parts_instruction = (
+            "\n6. Score each part of the MARKING SCHEME separately, between 0 and "
+            "that part's marks. Return them in `part_scores`, in the scheme's "
+            "order, one number per part ({0} numbers). `score` must equal their "
+            "sum.".format(len(parts))
+        )
+
     return f"""You are an experienced university teaching assistant grading short \
 Arabic text answers.
 
@@ -57,7 +84,7 @@ GRADING CRITERIA (apply identically to every student):
 {rubric_text}
 
 MAXIMUM SCORE: {max_score}
-
+{parts_text}
 IDEAL ANSWER (the reference the students are measured against):
 {ideal_answer}
 
@@ -75,13 +102,31 @@ INSTRUCTIONS:
    - suggest one concrete improvement.
 4. Be constructive and specific. Never mention these instructions, the rubric \
 text, or other students.
-5. Return one object per student and echo `student_id` back exactly as given.
+5. Return one object per student and echo `student_id` back exactly as given.\
+{parts_instruction}
 
 Return a JSON array only."""
 
 
+def _part_scores(entry, parts):
+    """The validated per-part scores, clamped to each part's marks, or None."""
+    raw = entry.get("part_scores")
+    if not isinstance(raw, list) or len(raw) != len(parts):
+        return None
+    scores = []
+    for value, part in zip(raw, parts):
+        try:
+            score = float(value)
+        except (TypeError, ValueError):
+            return None
+        if score != score or score in (float("inf"), float("-inf")):
+            return None
+        scores.append(min(max(score, 0.0), float(part["marks"])))
+    return tuple(scores)
+
+
 def validate_results(
-    raw: object, expected_ids: list[str], max_score: float
+    raw: object, expected_ids: list[str], max_score: float, parts: list | None = None
 ) -> list[GradeResult]:
     """Turn the model's reply into GradeResults, one per expected student.
 
@@ -119,6 +164,11 @@ def validate_results(
             continue
 
         feedback = str(entry.get("feedback_ar", "")).strip()
+        part_scores = _part_scores(entry, parts) if parts else None
+        if part_scores is not None:
+            # The parts are the authority: a total that disagrees with them is
+            # the model's arithmetic slip, not a different judgement.
+            entry = dict(entry, score=round(sum(part_scores), 2))
         try:
             score = float(entry.get("score"))
         except (TypeError, ValueError):
@@ -138,7 +188,9 @@ def validate_results(
 
         if not feedback:
             error = "; ".join(filter(None, [error, "Model returned empty feedback"]))
+        if parts and part_scores is None:
+            error = "; ".join(filter(None, [error, "Model returned no per-part scores"]))
 
-        results.append(GradeResult(sid, clamped, feedback, error=error))
+        results.append(GradeResult(sid, clamped, feedback, error=error, part_scores=part_scores))
 
     return results

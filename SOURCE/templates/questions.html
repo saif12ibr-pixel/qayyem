@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% import "_answer_fields.html" as fields with context %}
+{% block title %}{{ _('Set up questions') }} &mdash; {{ _('Qayyem') }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+
+    <h1 class="h4 mb-1">{{ assignment['title'] }}</h1>
+    <p class="text-body-secondary small mb-3">
+      {{ _('This file has %(count)s questions. Give each one the ideal answer it is compared against and how many marks it is worth. Questions can be worth different marks; the exam total is their sum.', count=questions|length) }}
+    </p>
+
+    <form method="post" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      {% for q in questions %}
+        {% set suffix = q['id']|string %}
+        {% set field_suffix = '_' ~ suffix %}
+        <div class="card shadow-sm mb-3">
+          <div class="card-body">
+            <div class="d-flex align-items-baseline gap-2 mb-3">
+              <span class="step-number">{{ q['position'] }}</span>
+              <span class="fw-semibold" dir="auto">{{ q['title'] }}</span>
+            </div>
+
+            <div class="form-label fw-semibold">{{ _('Ideal answer') }}</div>
+            {{ fields.ideal_answer(field_suffix, form, _('Upload only the pages this question covers; long files are trimmed.')) }}
+
+            <div class="row g-3 mt-1">
+              <div class="col-md-8">
+                <label for="rubric_{{ suffix }}" class="form-label fw-semibold">{{ _('Grading rubric') }} <span class="text-body-secondary fw-normal">{{ _('(optional)') }}</span></label>
+                <textarea class="form-control" id="rubric_{{ suffix }}"
+                          name="rubric_{{ suffix }}" rows="2"
+                          dir="auto">{{ form.get('rubric_' ~ suffix, '') }}</textarea>
+              </div>
+              <div class="col-md-4">
+                <label for="max_score_{{ suffix }}" class="form-label fw-semibold">{{ _('Marks for this question') }}</label>
+                <input type="number" class="form-control question-max"
+                       id="max_score_{{ suffix }}" name="max_score_{{ suffix }}"
+                       value="{{ form.get('max_score_' ~ suffix, '10') }}"
+                       min="1" max="1000" step="0.5" required>
+              </div>
+            </div>
+
+            {{ fields.parts(field_suffix, form, 'max_score_' ~ suffix) }}
+          </div>
+        </div>
+      {% endfor %}
+
+      <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <button type="submit" class="btn btn-primary btn-lg" id="grade-btn">
+          {{ _('Grade all questions') }}
+        </button>
+        <span class="text-body-secondary">{{ _('Exam total:') }} <strong id="exam-total">&mdash;</strong></span>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='answer-fields.js') }}"></script>
+<script>
+  // Keep the exam total in step with the per-question marks.
+  const maxInputs = document.querySelectorAll('.question-max');
+  function updateTotal() {
+    let total = 0;
+    maxInputs.forEach(function (input) { total += parseFloat(input.value) || 0; });
+    document.getElementById('exam-total').textContent = total;
+  }
+  maxInputs.forEach(function (input) { input.addEventListener('input', updateTotal); });
+  updateTotal();
+
+  // UC-3: prevent a duplicate submission while the upload is in flight.
+  document.querySelector('form').addEventListener('submit', function (event) {
+    const button = document.getElementById('grade-btn');
+    if (button.disabled) { event.preventDefault(); return; }
+    button.disabled = true;
+    button.textContent = {{ _('Uploading…')|string|tojson }};
+  });
+</script>
+{% endblock %}

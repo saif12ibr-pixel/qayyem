@@ -12,6 +12,7 @@ The work is split in two:
 
 Keeping them separate means the pipeline is testable without any threading.
 """
+import json
 import threading
 import traceback
 
@@ -50,16 +51,28 @@ def _bump_progress(conn, assignment_id, amount):
 
 
 def _save_result(conn, response_id, result, model_name):
+    part_scores = json.dumps(list(result.part_scores)) if result.part_scores else None
     conn.execute(
-        """INSERT INTO grading_result (response_id, score, feedback_ar, model_name, error)
-           VALUES (?, ?, ?, ?, ?)
+        """INSERT INTO grading_result
+               (response_id, score, feedback_ar, model_name, error, part_scores)
+           VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT(response_id) DO UPDATE SET
                score = excluded.score,
                feedback_ar = excluded.feedback_ar,
                model_name = excluded.model_name,
-               error = excluded.error""",
-        (response_id, result.score, result.feedback_ar, model_name, result.error),
+               error = excluded.error,
+               part_scores = excluded.part_scores""",
+        (response_id, result.score, result.feedback_ar, model_name, result.error,
+         part_scores),
     )
+
+
+def _grade(grader, items, ideal, rubric, max_score, parts):
+    # Only a marked-in-parts question passes `parts`, so a grader written
+    # against the original four-argument interface keeps working.
+    if parts:
+        return grader.grade_batch(items, ideal, rubric, max_score, parts=parts)
+    return grader.grade_batch(items, ideal, rubric, max_score)
 
 
 def run_grading_job(app, assignment_id):
@@ -73,8 +86,8 @@ def run_grading_job(app, assignment_id):
             return "failed"
 
         rows = conn.execute(
-            "SELECT id, student_id, response_text FROM student_response "
-            "WHERE assignment_id = ? ORDER BY row_number",
+            "SELECT id, question_id, student_id, response_text FROM student_response "
+            "WHERE assignment_id = ? ORDER BY question_id, row_number",
             (assignment_id,),
         ).fetchall()
 
@@ -101,9 +114,21 @@ def run_grading_job(app, assignment_id):
             _set_status(conn, assignment_id, "failed", str(exc))
             return "failed"
 
-        max_score = float(assignment["max_score"])
-        ideal = assignment["ideal_answer"]
-        rubric = assignment["rubric"] or ""
+        # Each question is graded against its own ideal answer and rubric. A
+        # single-question upload has no question rows and uses the assignment's.
+        contexts = {
+            None: (assignment["ideal_answer"], assignment["rubric"] or "",
+                   float(assignment["max_score"]),
+                   json.loads(assignment["parts"]) if assignment["parts"] else None),
+        }
+        for question in conn.execute(
+            "SELECT * FROM question WHERE assignment_id = ?", (assignment_id,)
+        ):
+            contexts[question["id"]] = (
+                question["ideal_answer"] or "", question["rubric"] or "",
+                float(question["max_score"]),
+                json.loads(question["parts"]) if question["parts"] else None,
+            )
 
         # An empty response needs no AI call: UC-3 alternate flow 2 specifies a
         # score of zero with a default message. Skipping it also saves tokens.
@@ -127,12 +152,19 @@ def run_grading_job(app, assignment_id):
         failed_permanently = None
         rate_limited = None
 
-        for batch in _chunk(gradable, batch_size):
+        # Batches never mix questions, since a batch shares one ideal answer.
+        # Student IDs are unique within a question, so they still key results.
+        batches = []
+        for question_id in dict.fromkeys(r["question_id"] for r in gradable):
+            group = [r for r in gradable if r["question_id"] == question_id]
+            batches.extend((contexts[question_id], b) for b in _chunk(group, batch_size))
+
+        for (ideal, rubric, max_score, parts), batch in batches:
             by_student = {r["student_id"]: r["id"] for r in batch}
             items = [ResponseItem(r["student_id"], r["response_text"]) for r in batch]
 
             try:
-                results = grader.grade_batch(items, ideal, rubric, max_score)
+                results = _grade(grader, items, ideal, rubric, max_score, parts)
             except GraderRateLimitError as exc:
                 # Do NOT split the batch here. The provider is refusing because
                 # too many requests arrived; retrying each item separately would
@@ -149,7 +181,7 @@ def run_grading_job(app, assignment_id):
                 # Here splitting is worth it, so a single bad row cannot cost
                 # the other nine their grades.
                 results = _grade_individually(
-                    grader, items, ideal, rubric, max_score, str(exc)
+                    grader, items, ideal, rubric, max_score, parts, str(exc)
                 )
                 if isinstance(exc, GraderConfigError):
                     failed_permanently = str(exc)
@@ -202,14 +234,14 @@ def run_grading_job(app, assignment_id):
         conn.close()
 
 
-def _grade_individually(grader, items, ideal, rubric, max_score, batch_error):
+def _grade_individually(grader, items, ideal, rubric, max_score, parts, batch_error):
     """Grade items one by one after their batch failed."""
     from .grading.base import GradeResult
 
     results = []
     for item in items:
         try:
-            results.extend(grader.grade_batch([item], ideal, rubric, max_score))
+            results.extend(_grade(grader, [item], ideal, rubric, max_score, parts))
         except (GraderError, GraderTransientError) as exc:
             results.append(
                 GradeResult(

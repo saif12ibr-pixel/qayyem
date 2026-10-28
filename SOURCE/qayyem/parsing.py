@@ -22,6 +22,8 @@ import unicodedata
 
 import pandas as pd
 
+from .i18n import gettext as _
+
 ALLOWED_EXTENSIONS = (".csv", ".xlsx")
 ENCODINGS = ("utf-8-sig", "utf-8", "cp1256")
 
@@ -115,23 +117,23 @@ def _match_column(columns, aliases):
     if len(exact) == 1:
         return exact[0]
     if len(exact) > 1:
-        raise ParseError(
-            "More than one column is named like the answer column ("
-            + ", ".join(str(c) for c in exact)
-            + "). Rename all but one."
-        )
+        raise ParseError(_(
+            "More than one column is named like the answer column (%(columns)s). "
+            "Rename all but one.",
+            columns=", ".join(str(c) for c in exact),
+        ))
     if len(loose) == 1:
         return loose[0]
     if len(loose) > 1:
-        raise ParseError(
-            "This file looks like it holds more than one question: "
-            + str(len(loose)) + " columns could be answers ("
-            + ", ".join(str(c) for c in loose[:4])
-            + (", ..." if len(loose) > 4 else "")
-            + "). Qayyem grades one question at a time, because each question "
-            "needs its own ideal answer and rubric. Upload one question per "
-            "file, or rename just the column you want graded to 'response'."
-        )
+        raise ParseError(_(
+            "This file looks like it holds more than one question: %(count)s "
+            "columns could be answers (%(columns)s). Qayyem grades one question "
+            "at a time, because each question needs its own ideal answer and "
+            "rubric. Upload one question per file, or rename just the column you "
+            "want graded to 'response'.",
+            count=len(loose),
+            columns=", ".join(str(c) for c in loose[:4]) + (", ..." if len(loose) > 4 else ""),
+        ))
     return None
 
 
@@ -142,10 +144,11 @@ def _read_dataframe(filename, data):
         try:
             return pd.read_excel(io.BytesIO(data), dtype=str)
         except Exception as exc:
-            raise ParseError(
+            raise ParseError(_(
                 "That .xlsx file could not be read. Re-save it from Excel and "
-                "try again. (" + str(exc)[:160] + ")"
-            ) from exc
+                "try again. (%(detail)s)",
+                detail=str(exc)[:160],
+            )) from exc
 
     last = None
     for encoding in ENCODINGS:
@@ -155,95 +158,173 @@ def _read_dataframe(filename, data):
             last = exc
             continue
         except pd.errors.EmptyDataError as exc:
-            raise ParseError("That file is empty.") from exc
+            raise ParseError(_("That file is empty.")) from exc
         except Exception as exc:
-            raise ParseError(
-                "That CSV file could not be read. Check it opens in Excel. ("
-                + str(exc)[:160] + ")"
-            ) from exc
-    raise ParseError(
+            raise ParseError(_(
+                "That CSV file could not be read. Check it opens in Excel. (%(detail)s)",
+                detail=str(exc)[:160],
+            )) from exc
+    raise ParseError(_(
         "The file's text encoding could not be determined. Save it as CSV UTF-8 "
-        "and try again. (" + str(last)[:120] + ")"
-    )
+        "and try again. (%(detail)s)",
+        detail=str(last)[:120],
+    ))
+
+
+MAX_QUESTIONS = 20
+
+
+def _answer_columns(columns):
+    """Every answer column, for a file that may hold a whole exam.
+
+    One exact match still settles it, as in _match_column, but several loose
+    matches ("answer 1", "answer 2", ...) are read as separate questions
+    rather than rejected.
+    """
+    exact, loose = _match_columns(columns, RESPONSE_ALIASES)
+    if len(exact) == 1:
+        return exact
+    if len(exact) > 1:
+        raise ParseError(_(
+            "More than one column is named like the answer column (%(columns)s). "
+            "Rename all but one.",
+            columns=", ".join(str(c) for c in exact),
+        ))
+    return loose
+
+
+def _check_upload(filename, data):
+    if not filename:
+        raise ParseError(_("No file was selected."))
+    if not filename.lower().endswith(ALLOWED_EXTENSIONS):
+        raise ParseError(_(
+            "Only .csv and .xlsx files are supported. You uploaded '%(name)s'.",
+            name=filename,
+        ))
+    if not data:
+        raise ParseError(_("That file is empty."))
+
+    frame = _read_dataframe(filename, data)
+    if frame.empty or not len(frame.columns):
+        raise ParseError(_("That file has no rows of data."))
+    return frame
+
+
+def _missing_column_error(frame, missing_id):
+    found = ", ".join(str(c) for c in frame.columns)
+    if missing_id:
+        message = _(
+            "Could not find a student ID column. Found these columns: %(found)s. "
+            "Name them 'student_id' and 'response' (or the Arabic equivalents) "
+            "and try again.",
+            found=found,
+        )
+    else:
+        message = _(
+            "Could not find a response column. Found these columns: %(found)s. "
+            "Name them 'student_id' and 'response' (or the Arabic equivalents) "
+            "and try again.",
+            found=found,
+        )
+    return ParseError(message)
+
+
+def _read_students(frame, id_col, answer_cols, max_rows):
+    """Rows as {"student_id", "row_number", "answers"}, one answer per column."""
+    if len(frame) > max_rows:
+        raise ParseError(_(
+            "That file has %(rows)s rows, above the limit of %(limit)s. "
+            "Split it into smaller files.",
+            rows=len(frame), limit=max_rows,
+        ))
+
+    def text(value):
+        return "" if pd.isna(value) else str(value).strip()
+
+    students = []
+    seen = {}
+    for position, (_index, row) in enumerate(frame.iterrows()):
+        spreadsheet_row = position + 2  # +1 for header, +1 for 1-based rows
+        student_id = text(row[id_col])
+        answers = [text(row[col]) for col in answer_cols]
+
+        if not student_id:
+            if not any(answers):
+                continue  # a blank trailing row, not an error
+            raise ParseError(_(
+                "Row %(row)s has a response but no student ID.", row=spreadsheet_row
+            ))
+
+        if student_id in seen:
+            raise ParseError(_(
+                "Student ID '%(id)s' appears twice (rows %(first)s and %(second)s). "
+                "Each student must appear once.",
+                id=student_id, first=seen[student_id], second=spreadsheet_row,
+            ))
+        seen[student_id] = spreadsheet_row
+
+        students.append(
+            {"student_id": student_id, "row_number": spreadsheet_row, "answers": answers}
+        )
+
+    if not students:
+        raise ParseError(_("No student responses were found in that file."))
+    return students
+
+
+def parse_exam(filename, data, max_rows=500):
+    """Parse an upload that may hold one question or several.
+
+    Returns {"questions": [column header, ...], "students": [...]}, where each
+    student's "answers" lines up with "questions".
+    """
+    frame = _check_upload(filename, data)
+
+    id_col = _match_column(frame.columns, STUDENT_ID_ALIASES)
+    if id_col is None:
+        raise _missing_column_error(frame, missing_id=True)
+    answer_cols = [col for col in _answer_columns(frame.columns) if col != id_col]
+    if not answer_cols:
+        raise _missing_column_error(frame, missing_id=False)
+    if len(answer_cols) > MAX_QUESTIONS:
+        raise ParseError(_(
+            "That file has %(count)s answer columns, above the limit of %(limit)s "
+            "questions. Split it into smaller files.",
+            count=len(answer_cols), limit=MAX_QUESTIONS,
+        ))
+
+    return {
+        "questions": [str(col) for col in answer_cols],
+        "students": _read_students(frame, id_col, answer_cols, max_rows),
+    }
 
 
 def parse_responses(filename, data, max_rows=500):
-    """Parse an upload into a list of response dicts.
+    """Parse a single-question upload into a list of response dicts.
 
     Returns a list of {"student_id", "response_text", "row_number"} in file
     order. `row_number` is the spreadsheet row the instructor sees, so error
     messages can point at it.
     """
-    if not filename:
-        raise ParseError("No file was selected.")
-    if not filename.lower().endswith(ALLOWED_EXTENSIONS):
-        raise ParseError(
-            "Only .csv and .xlsx files are supported. You uploaded '"
-            + filename + "'."
-        )
-    if not data:
-        raise ParseError("That file is empty.")
-
-    frame = _read_dataframe(filename, data)
-    if frame.empty or not len(frame.columns):
-        raise ParseError("That file has no rows of data.")
+    frame = _check_upload(filename, data)
 
     id_col = _match_column(frame.columns, STUDENT_ID_ALIASES)
     resp_col = _match_column(frame.columns, RESPONSE_ALIASES)
 
     if id_col is None or resp_col is None:
-        found = ", ".join(str(c) for c in frame.columns)
-        missing = "student ID" if id_col is None else "response"
-        raise ParseError(
-            "Could not find a " + missing + " column. Found these columns: "
-            + found + ". Name them 'student_id' and 'response' (or the Arabic "
-            "equivalents) and try again."
-        )
+        raise _missing_column_error(frame, missing_id=id_col is None)
     if id_col == resp_col:
-        raise ParseError(
-            "The student ID and response columns resolved to the same column ('"
-            + str(id_col) + "'). Rename one of them."
-        )
+        raise ParseError(_(
+            "The student ID and response columns resolved to the same column "
+            "('%(column)s'). Rename one of them.",
+            column=id_col,
+        ))
 
-    if len(frame) > max_rows:
-        raise ParseError(
-            "That file has " + str(len(frame)) + " rows, above the limit of "
-            + str(max_rows) + ". Split it into smaller files."
-        )
-
-    responses = []
-    seen = {}
-    for position, (_, row) in enumerate(frame.iterrows()):
-        spreadsheet_row = position + 2  # +1 for header, +1 for 1-based rows
-        raw_id = row[id_col]
-        student_id = "" if pd.isna(raw_id) else str(raw_id).strip()
-        raw_text = row[resp_col]
-        response_text = "" if pd.isna(raw_text) else str(raw_text).strip()
-
-        if not student_id:
-            if not response_text:
-                continue  # a blank trailing row, not an error
-            raise ParseError(
-                "Row " + str(spreadsheet_row) + " has a response but no student ID."
-            )
-
-        if student_id in seen:
-            raise ParseError(
-                "Student ID '" + student_id + "' appears twice (rows "
-                + str(seen[student_id]) + " and " + str(spreadsheet_row)
-                + "). Each student must appear once."
-            )
-        seen[student_id] = spreadsheet_row
-
-        responses.append(
-            {
-                "student_id": student_id,
-                "response_text": response_text,
-                "row_number": spreadsheet_row,
-            }
-        )
-
-    if not responses:
-        raise ParseError("No student responses were found in that file.")
-
-    return responses
+    return [
+        {
+            "student_id": s["student_id"],
+            "response_text": s["answers"][0],
+            "row_number": s["row_number"],
+        }
+        for s in _read_students(frame, id_col, [resp_col], max_rows)
+    ]

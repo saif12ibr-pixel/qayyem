@@ -51,6 +51,9 @@ class GradeResult:
     score: Optional[float]
     feedback_ar: str
     error: Optional[str] = None
+    # One score per marking-scheme part, in the parts' order, when the question
+    # is marked in parts. `score` is then their sum.
+    part_scores: Optional[tuple] = None
 
 
 class Grader(ABC):
@@ -65,8 +68,12 @@ class Grader(ABC):
         ideal_answer: str,
         rubric: str,
         max_score: float,
+        parts: Optional[list] = None,
     ) -> list[GradeResult]:
         """Return one GradeResult per item, in any order.
+
+        `parts`, when given, is the question's marking scheme as a list of
+        {"name", "marks"}; each result then carries part_scores.
 
         Implementations must return a result for every student_id they were
         given. Raise GraderTransientError for retryable failures and

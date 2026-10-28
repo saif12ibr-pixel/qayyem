@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Results &mdash; Qayyem{% endblock %}
+{% block title %}{{ _('Results') }} &mdash; {{ _('Qayyem') }}{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h4 mb-0">Grading sessions</h1>
-  <a href="{{ url_for('upload.new') }}" class="btn btn-primary btn-sm">New grading</a>
+  <h1 class="h4 mb-0">{{ _('Grading sessions') }}</h1>
+  <a href="{{ url_for('upload.new') }}" class="btn btn-primary btn-sm">{{ _('New grading') }}</a>
 </div>
 
 {% if not assignments %}
   <div class="card shadow-sm">
     <div class="card-body text-center py-5">
-      <p class="mb-3 text-body-secondary">You have not graded anything in this session.</p>
-      <a href="{{ url_for('upload.new') }}" class="btn btn-primary">Grade an assignment</a>
+      <p class="mb-3 text-body-secondary">{{ _('You have not graded anything in this session.') }}</p>
+      <a href="{{ url_for('upload.new') }}" class="btn btn-primary">{{ _('Grade an assignment') }}</a>
     </div>
   </div>
 {% else %}
@@ -20,9 +20,9 @@
       <table class="table table-hover align-middle mb-0">
         <thead class="table-head">
           <tr>
-            <th>File</th>
-            <th class="text-center" style="width: 7rem;">Responses</th>
-            <th style="width: 11rem;">Status</th>
+            <th>{{ _('File') }}</th>
+            <th class="text-center" style="width: 7rem;">{{ _('Responses') }}</th>
+            <th style="width: 11rem;">{{ _('Status') }}</th>
             <th style="width: 12rem;"></th>
           </tr>
         </thead>
@@ -36,22 +36,25 @@
               <td class="text-center">{{ a['response_count'] }}</td>
               <td>
                 {% if a['status'] == 'complete' %}
-                  <span class="badge text-bg-success">Complete</span>
+                  <span class="badge text-bg-success">{{ _('Complete') }}</span>
                   {% if not a['exported_at'] %}
-                    <span class="badge text-bg-warning">Not downloaded</span>
+                    <span class="badge text-bg-warning">{{ _('Not downloaded') }}</span>
                   {% endif %}
                 {% elif a['status'] == 'failed' %}
-                  <span class="badge text-bg-danger">Failed</span>
+                  <span class="badge text-bg-danger">{{ _('Failed') }}</span>
+                {% elif a['status'] == 'pending' and not a['progress_done'] and a['question_count'] %}
+                  <a class="badge text-bg-secondary text-decoration-none"
+                     href="{{ url_for('upload.questions', assignment_id=a['id']) }}">{{ _('Needs setup') }}</a>
                 {% else %}
                   <span class="badge text-bg-info">
-                    Grading {{ a['progress_done'] }}/{{ a['progress_total'] }}
+                    {{ _('Grading %(done)s/%(total)s', done=a['progress_done'], total=a['progress_total']) }}
                   </span>
                 {% endif %}
               </td>
               <td class="text-end">
                 {% if a['status'] == 'complete' %}
                   <a class="btn btn-sm btn-outline-success"
-                     href="{{ url_for('results.export', assignment_id=a['id']) }}">Download Excel</a>
+                     href="{{ url_for('results.export', assignment_id=a['id']) }}">{{ _('Download Excel') }}</a>
                 {% endif %}
               </td>
             </tr>
@@ -62,8 +65,7 @@
   </div>
 
   <p class="form-text mt-3">
-    These are deleted when you sign out or your session expires (data-retention
-    requirement). Download anything you need to keep.
+    {{ _('These are deleted when you sign out or your session expires (data-retention requirement). Download anything you need to keep.') }}
   </p>
 {% endif %}
 {% endblock %}

@@ -41,10 +41,10 @@ class ClaudeGrader(Grader):
         # this grader does not add a second retry loop on top of it.
         self._client = client or anthropic.Anthropic(api_key=api_key, max_retries=2)
 
-    def grade_batch(self, items, ideal_answer, rubric, max_score):
+    def grade_batch(self, items, ideal_answer, rubric, max_score, parts=None):
         if not items:
             return []
-        prompt = build_prompt(items, ideal_answer, rubric, max_score)
+        prompt = build_prompt(items, ideal_answer, rubric, max_score, parts)
 
         try:
             response = self._client.messages.create(
@@ -88,7 +88,7 @@ class ClaudeGrader(Grader):
             parsed = json.loads(text)
         except json.JSONDecodeError as exc:
             raise GraderError("Model did not return valid JSON: " + str(exc)) from exc
-        return validate_results(parsed, [i.student_id for i in items], max_score)
+        return validate_results(parsed, [i.student_id for i in items], max_score, parts)
 
     @staticmethod
     def _extract_text(response):

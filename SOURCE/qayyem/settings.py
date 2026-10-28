@@ -24,6 +24,7 @@ from .auth import login_required
 from .crypto import decrypt_key, encrypt_key, mask_key
 from .db import get_db
 from .grading import GraderConfigError, GraderTransientError, ResponseItem
+from .i18n import gettext as _
 from .grading.factory import (
     DEFAULT_MODELS,
     KNOWN_MODELS,
@@ -65,9 +66,9 @@ def grading_readiness(config, instructor_row):
     if provider == "fake":
         return {
             "ok": True,
-            "provider": "the offline test grader (no AI, for testing only)",
+            "provider": _("the offline test grader (no AI, for testing only)"),
             "note": "",
-            "source": "no key -- it scores by word overlap",
+            "source": _("no key -- it scores by word overlap"),
         }
 
     entry = next((p for p in SELECTABLE_PROVIDERS if p["name"] == provider), None)
@@ -78,25 +79,25 @@ def grading_readiness(config, instructor_row):
     # on the page where a class is about to be uploaded.
     caution = None
     if provider == "gemini":
-        caution = ("Free tier: a large class may reach the request limit and stop "
-                   "part way. Your responses are kept, so you can grade again "
-                   "once the limit resets.")
+        caution = _("Free tier: a large class may reach the request limit and stop "
+                    "part way. Your responses are kept, so you can grade again "
+                    "once the limit resets.")
     elif provider == "openai":
-        caution = "Usage is charged to the OpenAI account this key belongs to."
+        caution = _("Usage is charged to the OpenAI account this key belongs to.")
     elif provider == "claude":
-        caution = "Usage is charged to the Anthropic account this key belongs to."
+        caution = _("Usage is charged to the Anthropic account this key belongs to.")
     elif provider == "deepseek":
-        caution = ("Usage is charged to the DeepSeek account this key belongs to, "
-                   "and requests are processed on servers in China.")
+        caution = _("Usage is charged to the DeepSeek account this key belongs to, "
+                    "and requests are processed on servers in China.")
 
     own_key = decrypt_key(config.get("SECRET_KEY"), instructor_row["api_key_enc"])
     if own_key:
         return {"ok": True, "provider": title, "note": note,
-                "source": "your own key", "caution": caution}
+                "source": _("your own key"), "caution": caution}
 
     if _server_key_available(config, provider):
         return {"ok": True, "provider": title, "note": note,
-                "source": "the key this server is configured with",
+                "source": _("the key this server is configured with"),
                 "caution": caution}
 
     return {
@@ -104,7 +105,8 @@ def grading_readiness(config, instructor_row):
         "provider": title,
         "note": note,
         "source": None,
-        "message": "No API key is available for " + title + ", so grading cannot run yet.",
+        "message": _("No API key is available for %(provider)s, so grading cannot run yet.",
+                     provider=title),
     }
 
 
@@ -149,16 +151,16 @@ def index():
             try:
                 found = list_models(provider, key)
             except Exception as exc:  # noqa: BLE001 - reported to the instructor
-                flash("Could not fetch the model list: " + str(exc)[:200], "warning")
+                flash(_("Could not fetch the model list: %(detail)s", detail=str(exc)[:200]), "warning")
             else:
                 if found:
                     session["model_list"] = {"provider": provider, "models": found}
                     flash(
-                        "Found {0} model(s) your key can use.".format(len(found)),
+                        _("Found %(count)s model(s) your key can use.", count=len(found)),
                         "success",
                     )
                 else:
-                    flash("That key returned no usable grading models.", "warning")
+                    flash(_("That key returned no usable grading models."), "warning")
             return redirect(url_for("settings.index"))
 
         if action == "clear_key":
@@ -167,13 +169,13 @@ def index():
                 (g.instructor["id"],),
             )
             db.commit()
-            flash("Your API key was removed. Grading will use the server's key.", "success")
+            flash(_("Your API key was removed. Grading will use the server's key."), "success")
             return redirect(url_for("settings.index"))
 
         provider = (request.form.get("provider") or "").strip().lower()
         valid = {p["name"] for p in SELECTABLE_PROVIDERS}
         if provider not in valid:
-            flash("Choose a provider from the list.", "danger")
+            flash(_("Choose a provider from the list."), "danger")
             return redirect(url_for("settings.index"))
 
         model = (request.form.get("model") or "").strip() or DEFAULT_MODELS[provider]
@@ -193,7 +195,7 @@ def index():
                 (provider, model, g.instructor["id"]),
             )
         db.commit()
-        flash("Settings saved.", "success")
+        flash(_("Settings saved."), "success")
         return redirect(url_for("settings.index"))
 
     # A list fetched from the account wins over the curated starting list, but
@@ -246,21 +248,21 @@ def test_connection():
             10,
         )
     except GraderConfigError as exc:
-        flash("Configuration problem: " + str(exc), "danger")
+        flash(_("Configuration problem: %(detail)s", detail=str(exc)), "danger")
     except GraderTransientError as exc:
-        flash("Could not reach the provider: " + str(exc), "warning")
+        flash(_("Could not reach the provider: %(detail)s", detail=str(exc)), "warning")
     except Exception as exc:  # noqa: BLE001 - surface anything else as a message
-        flash("Test failed: " + str(exc)[:300], "danger")
+        flash(_("Test failed: %(detail)s", detail=str(exc)[:300]), "danger")
     else:
         if results and results[0].score is not None:
             flash(
-                "Connection works. {0} returned a score of {1} and Arabic feedback.".format(
-                    grader.name, results[0].score
-                ),
+                _("Connection works. %(model)s returned a score of %(score)s and Arabic feedback.",
+                  model=grader.name, score=results[0].score),
                 "success",
             )
         else:
-            note = results[0].error if results else "no result returned"
-            flash("The provider responded, but the reply was unusable: " + str(note), "warning")
+            note = results[0].error if results else _("no result returned")
+            flash(_("The provider responded, but the reply was unusable: %(detail)s", detail=str(note)),
+                  "warning")
 
     return redirect(url_for("settings.index"))
