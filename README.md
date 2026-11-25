@@ -17,7 +17,11 @@ Grades remain preliminary and open to instructor revision.
 - CSV / Excel upload with English or Arabic column headings
 - Batched, rubric-anchored AI grading with validation of every result
 - Pluggable AI providers: Google Gemini (default, free tier), OpenAI, Anthropic Claude, DeepSeek
-- Live grading progress and an Arabic RTL results dashboard
+- Live grading progress
+- Full Arabic interface (right to left) and English, with a light or dark theme
+- Class results dashboard: class average, top 5 students, highest and lowest,
+  and student groups (low, average, high) listed lowest first
+- Student search with each student's answers, grades and rank, and a per-student Excel file
 - Excel export with per-student results and assignment metadata
 - Session-scoped data retention, in line with the Saudi PDPL
 
