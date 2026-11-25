@@ -158,4 +158,4 @@ SUPPORT
 -------
 
 Qayyem - Senior Project II (CS489)
-College of Computing & Informatics, Saudi Electronic University, Dammam
+College of Computing & Informatics, Prince Musaid bin Abdulrahman University

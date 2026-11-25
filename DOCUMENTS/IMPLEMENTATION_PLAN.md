@@ -2,7 +2,7 @@
 
 AI-Powered Arabic Assignment Grading and Feedback System
 Senior Project II (CS489), College of Computing and Informatics
-Saudi Electronic University, Dammam
+Prince Musaid bin Abdulrahman University
 
 Prepared by Saif Amro Ibrahim, Team Leader
 11 October 2026
