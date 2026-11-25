@@ -2,7 +2,7 @@
 
 **AI-Powered Arabic Assignment Grading and Feedback System**
 
-Senior Project II (CS489) — continuation of Senior Project I (CS479)
+Senior Project II (CS489) — continuation of Senior Project I (CS489)
 College of Computing & Informatics, Prince Musaid bin Abdulrahman University
 
 ## Team
