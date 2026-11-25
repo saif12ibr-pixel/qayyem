@@ -13,11 +13,34 @@ AR = {
     "Settings": "الإعدادات",
     "Sign out": "تسجيل الخروج",
     "Sign out and delete": "تسجيل الخروج والحذف",
+    "Menu": "القائمة",
+
+    # --- Class overview and student search on the results page --------------
+    "Low": "منخفض",
+    "High": "مرتفع",
+    "below %(low)s%%": "أقل من %(low)s%%",
+    "%(low)s–%(high)s%%": "%(low)s–%(high)s%%",
+    "%(high)s%% and above": "%(high)s%% فأكثر",
+    "Top %(count)s students": "أعلى %(count)s طلاب",
+    "Percentage": "النسبة المئوية",
+    "Average per question": "المتوسط لكل سؤال",
+    "Highest: %(high)s (%(high_pct)s%%) · Lowest: %(low)s (%(low_pct)s%%)":
+        "الأعلى: %(high)s (%(high_pct)s%%) · الأدنى: %(low)s (%(low_pct)s%%)",
+    "Student groups": "مجموعات الطلاب",
+    "%(count)s of %(total)s students": "%(count)s من %(total)s طالبًا",
+    "Find a student": "البحث عن طالب",
+    "Type a student ID": "اكتب الرقم الجامعي",
+    "No student with that ID.": "لا يوجد طالب بهذا الرقم.",
+    "Rank %(rank)s of %(total)s": "الترتيب %(rank)s من %(total)s",
+    "Download Excel for this student": "تنزيل ملف Excel لهذا الطالب",
+    "Highest question": "أعلى سؤال",
+    "Student answer": "إجابة الطالب",
+    "Answer": "الإجابة",
     "Close": "إغلاق",
     "Switch to light theme": "التبديل إلى الوضع الفاتح",
     "Switch to dark theme": "التبديل إلى الوضع الداكن",
-    "Qayyem &mdash; College of Computing &amp; Informatics, Saudi Electronic University":
-        "قيّم &mdash; كلية الحوسبة والمعلوماتية، الجامعة السعودية الإلكترونية",
+    "Qayyem &mdash; College of Computing &amp; Informatics, Prince Musaid bin Abdulrahman University":
+        "قيّم &mdash; كلية الحوسبة والمعلوماتية، جامعة الأمير مساعد بن عبدالرحمن",
     "You have %(count)s graded result set(s) you have not downloaded. Signing out "
     "permanently deletes them. Continue?":
         "لديك %(count)s من مجموعات النتائج المصححة لم تُنزَّل بعد. تسجيل الخروج "
@@ -383,4 +406,342 @@ AR = {
     "Each part needs a name and marks greater than 0.":
         "يحتاج كل جزء إلى اسم ودرجة أكبر من 0.",
     "Model returned no per-part scores": "لم يُرجع النموذج درجات الأجزاء",
+
+    # --- Sign up --------------------------------------------------------------
+    "Sign up": "إنشاء حساب",
+    "Create an account": "إنشاء حساب",
+    "Create account": "إنشاء الحساب",
+    "New to Qayyem?": "جديد في قيّم؟",
+    "Already have an account?": "لديك حساب بالفعل؟",
+    "Sign in to grade answers and manage your subjects.":
+        "سجّل الدخول لتصحيح الإجابات وإدارة موادك.",
+    "For instructors. Your subjects and question banks are kept with your account; "
+    "student answers are deleted when you sign out.":
+        "لأعضاء هيئة التدريس. تُحفظ موادك وبنوك أسئلتك في حسابك، "
+        "وتُحذف إجابات الطلاب عند تسجيل الخروج.",
+    "Full name": "الاسم الكامل",
+    "Confirm password": "تأكيد كلمة المرور",
+    "At least 8 characters.": "8 أحرف على الأقل.",
+    "Use your university email (%(domains)s).": "استخدم بريدك الجامعي (%(domains)s).",
+    "Enter your full name.": "أدخل اسمك الكامل.",
+    "Enter a valid email address.": "أدخل بريدًا إلكترونيًا صحيحًا.",
+    "Sign up with your university email (%(domains)s).":
+        "أنشئ الحساب ببريدك الجامعي (%(domains)s).",
+    "The password must be at least %(count)s characters.":
+        "يجب ألا تقل كلمة المرور عن %(count)s أحرف.",
+    "The two passwords do not match.": "كلمتا المرور غير متطابقتين.",
+    "Too many attempts. Try again later.": "محاولات كثيرة. حاول مرة أخرى لاحقًا.",
+    "An account already exists for that email. Sign in instead.":
+        "يوجد حساب بهذا البريد بالفعل. سجّل الدخول بدلًا من ذلك.",
+    "Welcome to Qayyem, %(name)s. Your account is ready.":
+        "مرحبًا بك في قيّم يا %(name)s. حسابك جاهز.",
+
+    # --- Subjects -------------------------------------------------------------
+    "Subjects": "المواد",
+    "Subject": "المادة",
+    "No subject": "بدون مادة",
+    "Each subject keeps its own questions, model answers, marks and grading guidelines.":
+        "لكل مادة أسئلتها وإجاباتها النموذجية ودرجاتها وإرشادات تصحيحها الخاصة.",
+    "%(count)s question(s) &middot; %(marks)s marks": "%(count)s سؤال &middot; %(marks)s درجة",
+    "Add a subject": "إضافة مادة",
+    "Subject name": "اسم المادة",
+    "Course code": "رمز المقرر",
+    "e.g. Operating Systems": "مثل: نظم التشغيل",
+    "e.g. IT241": "مثل: IT241",
+    "Create subject": "إنشاء المادة",
+    "Give the subject a name.": "اكتب اسم المادة.",
+    "You can have at most %(count)s subjects.": "يمكنك إضافة %(count)s مادة كحد أقصى.",
+    "Subject “%(name)s” created. Add its questions, or import them from Word.":
+        "أُنشئت مادة «%(name)s». أضف أسئلتها، أو استوردها من ملف وورد.",
+    "Subject saved.": "حُفظت المادة.",
+    "Subject “%(name)s” and its question bank were deleted.":
+        "حُذفت مادة «%(name)s» وبنك أسئلتها.",
+    "Grade student answers": "تصحيح إجابات الطلاب",
+    "Download questions (Excel)": "تنزيل الأسئلة (إكسل)",
+    "Import questions from Word": "استيراد الأسئلة من وورد",
+    "Upload the exam as you wrote it. The AI takes only the questions from it, with "
+    "their choices, answers and marks, skipping the cover page, instructions and "
+    "anything else; mark the correct choice or write the model answer in the file so "
+    "it is copied too. You can review the questions here and download them as Excel.":
+        "ارفع الاختبار كما كتبته. يأخذ الذكاء الاصطناعي الأسئلة وحدها بخياراتها "
+        "وإجاباتها ودرجاتها، ويتجاوز صفحة الغلاف والتعليمات وكل ما سواها؛ حدّد الخيار "
+        "الصحيح أو اكتب الإجابة النموذجية في الملف لتُنقل معها. تراجع الأسئلة هنا "
+        "وتنزّلها ملف إكسل.",
+    "Word file": "ملف وورد",
+    "Existing questions": "الأسئلة الحالية",
+    "Add to the existing questions": "إضافتها إلى الأسئلة الحالية",
+    "Replace the existing questions": "استبدال الأسئلة الحالية",
+    "Import": "استيراد",
+    "Without an AI provider, how should the Word file look?":
+        "دون مزوّد ذكاء اصطناعي، كيف يكون شكل ملف وورد؟",
+    "Add from a Word file": "إضافة من ملف وورد",
+    "The AI reads the file and takes only the questions from it, with their choices, "
+    "answers and marks, skipping the cover page, instructions and anything else. They "
+    "are added to this subject&#39;s questions, where you can check and edit them.":
+        "يقرأ الذكاء الاصطناعي الملف ويأخذ منه الأسئلة وحدها بخياراتها وإجاباتها "
+        "ودرجاتها، ويتجاوز صفحة الغلاف والتعليمات وكل ما سواها. تُضاف إلى أسئلة هذه "
+        "المادة، حيث تراجعها وتعدّلها.",
+    "Read questions": "قراءة الأسئلة",
+    "or type one question": "أو اكتب سؤالًا واحدًا",
+    "Reading the file…": "جارٍ قراءة الملف…",
+    "No questions were found in '%(name)s'.": "لم يُعثر على أسئلة في '%(name)s'.",
+    "The Word file is long, so only its first part was read. Check that the last "
+    "questions were imported.":
+        "ملف وورد طويل، فقُرئ جزؤه الأول فقط. تأكد من استيراد الأسئلة الأخيرة.",
+    "No AI provider is set up on the Settings page, so the questions were read by "
+    "their numbering instead.":
+        "لم يُضبط مزوّد ذكاء اصطناعي في صفحة الإعدادات، فقُرئت الأسئلة حسب ترقيمها.",
+    "The AI could not read the file (%(error)s), so the questions were read by their "
+    "numbering instead.":
+        "تعذّر على الذكاء الاصطناعي قراءة الملف (%(error)s)، فقُرئت الأسئلة حسب ترقيمها.",
+    "Word&#39;s automatic numbering works too. Marks in brackets after a question are "
+    "picked up; otherwise a choice question gets 1 mark and a written one 5, and you "
+    "can change them below.":
+        "الترقيم التلقائي في وورد يعمل أيضًا. تُقرأ الدرجة المكتوبة بين قوسين بعد السؤال، "
+        "وإلا يأخذ سؤال الاختيار درجة واحدة والسؤال المقالي 5 درجات، ويمكنك تغييرها أدناه.",
+    "Subject settings": "إعدادات المادة",
+    "Grading guidelines": "إرشادات التصحيح",
+    "e.g. Accept answers in Arabic or English. Deduct for missing key terms.":
+        "مثل: تُقبل الإجابة بالعربية أو الإنجليزية. تُخصم درجة عند غياب المصطلحات الأساسية.",
+    "Applied to every question of this subject, on top of each question&#39;s own rubric.":
+        "تُطبَّق على كل أسئلة هذه المادة، إضافةً إلى معايير كل سؤال.",
+    "Save": "حفظ",
+    "Delete this subject and all its questions?": "هل تريد حذف هذه المادة وكل أسئلتها؟",
+    "Delete subject": "حذف المادة",
+    "Question bank": "بنك الأسئلة",
+    "Add question": "إضافة سؤال",
+    "No questions yet. Import the exam from Word, or add questions one by one.":
+        "لا توجد أسئلة بعد. استورد الاختبار من وورد، أو أضف الأسئلة واحدًا تلو الآخر.",
+    "Multiple choice": "اختيار من متعدد",
+    "MSQ": "سؤال اختيار متعدد",
+    "Open question": "سؤال مفتوح",
+    "All": "الكل",
+    "Filter question bank by type": "تصفية بنك الأسئلة حسب النوع",
+    "No %(type)s questions in this exam yet.": "لا توجد أسئلة من نوع %(type)s في هذا الاختبار بعد.",
+    "Written": "مقالي",
+    "%(marks)s mark(s)": "%(marks)s درجة",
+    "Correct answer": "الإجابة الصحيحة",
+    "No choice is starred as correct yet.": "لم يُحدَّد الخيار الصحيح بنجمة بعد.",
+    "No model answer yet. Add one before grading this question.":
+        "لا توجد إجابة نموذجية بعد. أضفها قبل تصحيح هذا السؤال.",
+    "Parts:": "الأجزاء:",
+    "Rubric:": "المعايير:",
+    "Edit": "تعديل",
+    "Grade answers to this question": "تصحيح إجابات هذا السؤال",
+    "Delete this question?": "هل تريد حذف هذا السؤال؟",
+    "Delete": "حذف",
+    "Grading sessions for this subject": "جلسات التصحيح لهذه المادة",
+    "%(count)s response(s)": "%(count)s إجابة",
+    "Choose the Word file with the questions.": "اختر ملف وورد الذي يحتوي على الأسئلة.",
+    "Imported %(count)s question(s) from “%(name)s”. Check them below.":
+        "استُورد %(count)s سؤال من «%(name)s». راجعها أدناه.",
+
+    # --- One bank question ----------------------------------------------------
+    "Edit question": "تعديل السؤال",
+    "Question %(n)s": "السؤال %(n)s",
+    "Question": "السؤال",
+    "Question type": "نوع السؤال",
+    "Choices": "الخيارات",
+    "One choice per line. Put a star (*) after the correct one.":
+        "خيار في كل سطر. ضع نجمة (*) بعد الخيار الصحيح.",
+    "One choice per line. Put a star (*) after every correct choice.":
+        "خيار في كل سطر. ضع نجمة (*) بعد كل خيار صحيح.",
+    "The AI automatically classifies each imported question as MSQ or open question.":
+        "يصنّف الذكاء الاصطناعي تلقائياً كل سؤال مستورد كسؤال اختيار متعدد أو سؤال مفتوح.",
+    "Model answer": "الإجابة النموذجية",
+    "The answer student responses are compared against.":
+        "الإجابة التي تُقارن بها إجابات الطلاب.",
+    "Save question": "حفظ السؤال",
+    "Cancel": "إلغاء",
+    "Type the question.": "اكتب السؤال.",
+    "A multiple-choice question needs at least two choices, one per line.":
+        "يحتاج سؤال الاختيار من متعدد إلى خيارين على الأقل، خيار في كل سطر.",
+    "Put a star (*) after the correct choice.": "ضع نجمة (*) بعد الخيار الصحيح.",
+    "Question added.": "أُضيف السؤال.",
+    "Question saved.": "حُفظ السؤال.",
+    "Question deleted.": "حُذف السؤال.",
+
+    # --- Reading questions from Word -----------------------------------------
+    "That file could not be read as a Word document. Save it as .docx and try again.":
+        "تعذّرت قراءة الملف كمستند وورد. احفظه بصيغة ‎.docx‎ وحاول مرة أخرى.",
+    "Questions must be a Word file (.docx). You uploaded '%(name)s'.":
+        "يجب أن تكون الأسئلة في ملف وورد (‎.docx‎). رفعت الملف '%(name)s'.",
+    "The Word file is empty.": "ملف وورد فارغ.",
+    "No questions were found in '%(name)s'. Number each question (1. 2. 3.), put a "
+    "letter before each choice (a) b) c)), and mark the correct choice or the model "
+    "answer with a star (*).":
+        "لم يُعثر على أسئلة في '%(name)s'. رقّم كل سؤال (1. 2. 3.)، وضع حرفًا قبل كل "
+        "خيار (أ- ب- ج-)، وحدّد الخيار الصحيح أو الإجابة النموذجية بنجمة (*).",
+    "A Word file can hold at most %(count)s questions.":
+        "يمكن أن يحتوي ملف وورد على %(count)s سؤال كحد أقصى.",
+    "Question %(number)s has choices but none is starred.":
+        "السؤال %(number)s له خيارات لكن لم يُحدَّد أي منها بنجمة.",
+    "Question %(number)s has no model answer.": "السؤال %(number)s بلا إجابة نموذجية.",
+
+    # --- Upload with a subject ------------------------------------------------
+    "Question from the bank": "سؤال من البنك",
+    "Answer taken from the question bank": "الإجابة مأخوذة من بنك الأسئلة",
+    "Its saved answer, rubric and marks are filled in below. Edit them if needed; changes are saved back to the bank.":
+        "عُبّئت إجابته المحفوظة ومعيار تصحيحه ودرجاته أدناه. عدّلها إن لزم، وتُحفظ التعديلات في البنك.",
+    "Take the answer from the question bank?": "هل تريد أخذ الإجابة من بنك الأسئلة؟",
+    "Pick a saved question of %(subject)s · %(exam)s, and its answer, rubric and marks are filled in for you. Or type the answer below.":
+        "اختر سؤالاً محفوظاً من %(subject)s · %(exam)s، وستُعبّأ إجابته ومعيار تصحيحه ودرجاته. أو اكتب الإجابة أدناه.",
+    "None, type the answer below": "لا، سأكتب الإجابة أدناه",
+    "(no saved answer yet)": "(لا توجد إجابة محفوظة بعد)",
+    "Question taken from the question bank": "السؤال مأخوذ من بنك الأسئلة",
+    "This question has no saved answer yet. Type it below, and it is saved to the bank for next time.":
+        "لا توجد إجابة محفوظة لهذا السؤال بعد. اكتبها أدناه، وستُحفظ في البنك لتستخدمها لاحقاً.",
+    "Type the answer below, and it is saved to the %(subject)s question bank for next time.":
+        "اكتب الإجابة أدناه، وستُحفظ في بنك أسئلة %(subject)s لتستخدمها لاحقاً.",
+    "Choose a subject at the top of the page, then pick one of its saved questions, and its answer, rubric and marks are filled in for you. Or type the answer below.":
+        "اختر مادة في أعلى الصفحة، ثم اختر أحد أسئلتها المحفوظة، وستُعبّأ إجابته ومعيار تصحيحه ودرجاته. أو اكتب الإجابة أدناه.",
+    "Subjects keep your questions and model answers so you do not retype them.":
+        "تحفظ المواد أسئلتك وإجاباتها النموذجية فلا تعيد كتابتها.",
+    "This subject has no questions yet.": "لا توجد أسئلة لهذه المادة بعد.",
+    "Add or import them": "أضفها أو استوردها",
+    "From the %(subject)s question bank:": "من بنك أسئلة %(subject)s:",
+    "Question format": "نمط الأسئلة",
+    "Single question": "سؤال واحد",
+    "Multiple questions": "عدة أسئلة",
+    "Choose one question per student, or a whole exam with several questions.":
+        "اختر سؤالاً واحداً لكل طالب، أو اختباراً كاملاً يضم عدة أسئلة.",
+    "For a whole exam, Qayyem sets up a separate model answer and score for each question on the next step.":
+        "في الاختبار الكامل، يتيح قيّم إعداد إجابة نموذجية ودرجة مستقلة لكل سؤال في الخطوة التالية.",
+    "It matches questions to the selected exam in your question bank by order.":
+        "يطابق الأسئلة مع الاختبار المحدد في بنك أسئلتك حسب ترتيبها.",
+    "Continue to question setup": "المتابعة لإعداد الأسئلة",
+    "Choose single question or multiple questions.": "اختر سؤالاً واحداً أو عدة أسئلة.",
+    "This upload contains multiple questions. Choose Multiple questions, or upload a single-question file.":
+        "يحتوي الملف المرفوع على عدة أسئلة. اختر «عدة أسئلة» أو ارفع ملفاً يحتوي على سؤال واحد.",
+    "Only one question was found. Choose Single question, or upload an exam with at least two questions.":
+        "تم العثور على سؤال واحد فقط. اختر «سؤال واحد» أو ارفع اختباراً يحتوي على سؤالين على الأقل.",
+    "Questions in this upload": "الأسئلة في هذا الرفع",
+    "One question": "سؤال واحد",
+    "Students in this upload": "الطلاب في هذا الرفع",
+    "One student": "طالب واحد",
+    "Multiple students": "عدة طلاب",
+    "For one student, upload one response file. For multiple students, upload a class list or several answer papers.":
+        "لطالب واحد، ارفع ملف إجابة واحداً. ولعدة طلاب، ارفع قائمة الصف أو عدة ملفات إجابة.",
+    "Two kinds of file work:": "يمكن رفع نوعين من الملفات:",
+    "Question text": "نص السؤال",
+    "This question and its answer details will be saved to %(subject)s question bank automatically. If blank, the detected question label from the uploaded file will be used.":
+        "سيُحفظ هذا السؤال وتفاصيل إجابته تلقائياً في بنك أسئلة مادة %(subject)s. إذا تُرك النص فارغاً، فسيُستخدم عنوان السؤال المستخرج من الملف المرفوع.",
+    "Select a subject above if you want to save this question to your question bank.":
+        "اختر مادة أعلاه إذا أردت حفظ هذا السؤال في بنك أسئلتك.",
+    "Answers will be taken from the question bank": "ستُؤخذ الإجابات من بنك الأسئلة",
+    "The saved questions of %(subject)s · %(exam)s (%(count)s) fill questions 1, 2, 3… in order, with their answers, rubrics and marks. You can review and edit them on the next step; changes are saved back to the bank.":
+        "تُملأ الأسئلة 1 و2 و3… بالترتيب من الأسئلة المحفوظة في %(subject)s · %(exam)s (%(count)s)، مع إجاباتها ومعايير تصحيحها ودرجاتها. يمكنك مراجعتها وتعديلها في الخطوة التالية، وتُحفظ التعديلات في البنك.",
+    "No saved questions for this exam yet": "لا توجد أسئلة محفوظة لهذا الاختبار بعد",
+    "Set up each question on the next step, and they are saved to the %(subject)s question bank for next time.":
+        "أعدّ كل سؤال في الخطوة التالية، وستُحفظ الأسئلة في بنك أسئلة %(subject)s لتستخدمها لاحقاً.",
+    "Take the answers from the question bank?": "هل تريد أخذ الإجابات من بنك الأسئلة؟",
+    "Choose a subject and exam at the top of the page, and each question’s saved answer, rubric and marks are filled in for you. Or continue without one and type them on the next step.":
+        "اختر المادة والاختبار في أعلى الصفحة، وستُملأ لكل سؤال إجابته المحفوظة ومعيار تصحيحه ودرجاته. أو تابع دون مادة واكتبها في الخطوة التالية.",
+    "Choose a subject": "اختر مادة",
+    "Choose one student or multiple students.": "اختر طالباً واحداً أو عدة طلاب.",
+    "This upload contains %(count)s students. Choose Multiple students, or upload one student's responses.":
+        "يحتوي هذا الرفع على %(count)s طالباً. اختر «عدة طلاب» أو ارفع إجابات طالب واحد.",
+    "Only one student was found. Choose One student, or upload responses for at least two students.":
+        "تم العثور على طالب واحد فقط. اختر «طالب واحد» أو ارفع إجابات طالبين على الأقل.",
+    "Added this question to the %(subject)s question bank.":
+        "أُضيف هذا السؤال إلى بنك أسئلة مادة %(subject)s.",
+    "Saved this question to the %(subject)s question bank.":
+        "حُفظ هذا السؤال في بنك أسئلة مادة %(subject)s.",
+    "Question text (saved to question bank)": "نص السؤال (يُحفظ في بنك الأسئلة)",
+    "Check that this is the full question, not just an answer-column heading.":
+        "تأكد من أن هذا هو نص السؤال كاملاً، وليس عنوان عمود الإجابة فقط.",
+    "Qayyem loads saved answers, rubrics, marks, and parts from the %(subject)s question bank by question order when available. New questions and your edits are saved back automatically when you start grading.":
+        "يحمّل قيّم الإجابات ومعايير التصحيح والدرجات والأجزاء المحفوظة من بنك أسئلة مادة %(subject)s حسب ترتيب الأسئلة عند توفرها. تُحفظ الأسئلة الجديدة وتعديلاتك تلقائياً عند بدء التصحيح.",
+    "No subject is selected, so these questions will not be saved to a question bank.":
+        "لم تُحدد مادة، لذلك لن تُحفظ هذه الأسئلة في بنك الأسئلة.",
+    "Saved the reviewed questions to the %(subject)s question bank.":
+        "حُفظت الأسئلة التي راجعتها في بنك أسئلة مادة %(subject)s.",
+
+    # --- Reviewing grades -----------------------------------------------------
+    "Review": "مراجعة",
+    "Reviewed": "رُوجعت",
+    "%(count)s reviewed": "رُوجعت %(count)s",
+    "AI score: %(score)s": "درجة الذكاء الاصطناعي: %(score)s",
+    "Student&#39;s answer": "إجابة الطالب",
+    "Feedback to the student": "التغذية الراجعة للطالب",
+    "Save grade": "حفظ الدرجة",
+    "Check the grades here before downloading: press <strong>Review</strong> on any "
+    "answer to read it and change its score or feedback.":
+        "راجع الدرجات هنا قبل التنزيل: اضغط <strong>مراجعة</strong> على أي إجابة "
+        "لقراءتها وتعديل درجتها أو التغذية الراجعة.",
+    "Wait for grading to finish before changing grades.":
+        "انتظر حتى ينتهي التصحيح قبل تعديل الدرجات.",
+    "Each part's score must be between 0 and its marks.":
+        "يجب أن تكون درجة كل جزء بين 0 ودرجته الكاملة.",
+    "The score must be between 0 and %(max)s.": "يجب أن تكون الدرجة بين 0 و%(max)s.",
+    "Saved the grade for %(student)s.": "حُفظت درجة %(student)s.",
+
+    # --- Exams in the question bank -------------------------------------------
+    "Exam": "الاختبار",
+    "Assignment": "الواجب",
+    "Quiz": "الاختبار القصير",
+    "Midterm": "اختبار منتصف الفصل",
+    "Final": "الاختبار النهائي",
+    "Save to": "الحفظ في",
+    "Search": "بحث",
+    "Search questions": "ابحث في الأسئلة",
+    "Show all": "عرض الكل",
+    "They are saved to the %(exam)s questions.": "تُحفظ ضمن أسئلة: %(exam)s.",
+    "No %(exam)s questions yet. Import them from Word, or add them one by one.":
+        "لا توجد أسئلة في %(exam)s بعد. استوردها من ملف Word، أو أضفها واحدًا تلو الآخر.",
+    "No %(exam)s question matches \u201c%(search)s\u201d.":
+        "لا يوجد سؤال في %(exam)s يطابق \u201c%(search)s\u201d.",
+    "This exam has no questions in the bank yet.": "لا توجد أسئلة لهذا الاختبار في البنك بعد.",
+
+    # --- Several files and answer papers --------------------------------------
+    "Choose one file or several at once (hold Ctrl). Two kinds of file work:":
+        "اختر ملفًا واحدًا أو عدة ملفات معًا (مع الضغط على Ctrl). يُقبل نوعان من الملفات:",
+    "A class list: a .csv, .xlsx or Word table with a student ID column and a response "
+    "column. English or Arabic column headings both work":
+        "كشف الطلاب: ملف .csv أو .xlsx أو جدول في Word فيه عمود للرقم الجامعي وعمود للإجابة. "
+        "تصلح عناوين الأعمدة بالعربية أو الإنجليزية",
+    "Answer papers: a .docx, .pdf or .txt file per student, holding one answer or the "
+    "whole exam with each answer numbered (<code>Q1</code>, <code>1.</code>, "
+    "<code>&#1587;1</code>&hellip;). The student ID is read from a line like "
+    "<code>Student ID: 441001234</code> at the top, or else from the file name.":
+        "أوراق الإجابة: ملف .docx أو .pdf أو .txt لكل طالب، فيه إجابة واحدة أو الاختبار كاملًا "
+        "مع ترقيم كل إجابة (<code>Q1</code> أو <code>1.</code> أو <code>&#1587;1</code>&hellip;). "
+        "يُقرأ الرقم الجامعي من سطر مثل <code>Student ID: 441001234</code> في أعلى الورقة، "
+        "وإلا فمن اسم الملف.",
+    "%(first)s and %(count)s more": "%(first)s و%(count)s ملفات أخرى",
+    "%(name)s: %(error)s": "%(name)s: %(error)s",
+    "'%(name)s' has %(count)s questions but the first file has %(first)s. Every file must "
+    "hold the same exam.":
+        "في '%(name)s' عدد %(count)s من الأسئلة، بينما في الملف الأول %(first)s. يجب أن تحمل "
+        "جميع الملفات الاختبار نفسه.",
+    "'%(name)s' is empty.": "الملف '%(name)s' فارغ.",
+    "'%(name)s' is larger than 8 MB.": "حجم الملف '%(name)s' أكبر من 8 ميغابايت.",
+    "'%(name)s' is not a supported file. Upload .csv or .xlsx tables, or .docx, .pdf or "
+    ".txt answer papers.":
+        "الملف '%(name)s' غير مدعوم. ارفع جداول .csv أو .xlsx، أو أوراق إجابة .docx أو .pdf "
+        "أو .txt.",
+    "The answers in '%(name)s' are not numbered, so they cannot be matched to the "
+    "%(count)s questions. Start each answer on its own line with its number, like "
+    "'Q1', '1.' or 'س1'.":
+        "الإجابات في '%(name)s' غير مرقّمة، فلا يمكن مطابقتها مع الأسئلة الـ%(count)s. "
+        "ابدأ كل إجابة في سطر مستقل برقمها، مثل 'Q1' أو '1.' أو 'س1'.",
+    "No student ID was found in '%(name)s'. Name the file after the student, or start the "
+    "paper with a line like 'Student ID: 441001234'.":
+        "لم يُعثر على رقم جامعي في '%(name)s'. سمِّ الملف باسم الطالب، أو ابدأ الورقة بسطر "
+        "مثل 'Student ID: 441001234'.",
+    "No text was found in '%(name)s'. A scanned paper is an image; type the answer into a "
+    ".docx or .txt file instead.":
+        "لم يُعثر على نص في '%(name)s'. الورقة الممسوحة ضوئيًا صورة؛ اكتب الإجابة في ملف "
+        ".docx أو .txt بدلًا منها.",
+    "Student ID '%(id)s' appears in both '%(first)s' and '%(second)s'. Each student must "
+    "appear once.":
+        "الرقم الجامعي '%(id)s' موجود في '%(first)s' وفي '%(second)s'. يجب أن يظهر كل طالب "
+        "مرة واحدة.",
+    "That is %(count)s files, above the limit of %(limit)s. Upload them in smaller groups.":
+        "هذه %(count)s ملفات، وهذا أكثر من الحد البالغ %(limit)s. ارفعها على دفعات أصغر.",
+    "These files have %(rows)s students together, above the limit of %(limit)s. Upload "
+    "them in smaller groups.":
+        "في هذه الملفات %(rows)s طالبًا معًا، وهذا أكثر من الحد البالغ %(limit)s. ارفعها "
+        "على دفعات أصغر.",
+    "That upload is larger than 32 MB.": "حجم الملفات المرفوعة أكبر من 32 ميغابايت.",
 }

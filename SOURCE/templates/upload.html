@@ -33,22 +33,104 @@
       {% endif %}
     {% endif %}
 
-    <form method="post" enctype="multipart/form-data" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate id="upload-form">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      {% if form.get('bank_question') %}<input type="hidden" name="bank_question" value="{{ form.get('bank_question') }}">{% endif %}
+
+      {# Choosing a subject, one of its exams, or one of that exam's questions
+         reloads the page with the bank's model answers and marks filled in. #}
+      {% set exam_labels = {'assignment': _('Assignment'), 'quiz': _('Quiz'), 'midterm': _('Midterm'), 'final': _('Final')} %}
+      <div class="card shadow-sm mb-3">
+        <div class="card-body">
+          <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+              <label for="subject_id" class="form-label fw-semibold">{{ _('Subject') }}</label>
+              <select class="form-select" id="subject_id" name="subject_id" data-reload="subject">
+                <option value="">{{ _('No subject') }}</option>
+                {% for s in subjects %}
+                  <option value="{{ s['id'] }}" {% if subject and subject['id'] == s['id'] %}selected{% endif %}>
+                    {{ s['name'] }}{% if s['code'] %} ({{ s['code'] }}){% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            {% if subject %}
+              <div class="col-md-3">
+                <label for="exam_type" class="form-label fw-semibold">{{ _('Exam') }}</label>
+                <select class="form-select" id="exam_type" name="exam_type" data-reload="exam">
+                  {% for t in exam_types %}
+                    <option value="{{ t }}" {% if form.get('exam_type') == t %}selected{% endif %}>
+                      {{ exam_labels[t] }} ({{ counts[t] }})
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            {% endif %}
+          </div>
+          <div class="form-text">
+            {% if not subjects %}
+              {{ _('Subjects keep your questions and model answers so you do not retype them.') }}
+              <a href="{{ url_for('subjects.index') }}">{{ _('Add a subject') }}</a>
+            {% elif subject and not bank_questions %}
+              {{ _('This exam has no questions in the bank yet.') }}
+              <a href="{{ url_for('subjects.detail', subject_id=subject['id'], exam=form.get('exam_type')) }}">{{ _('Add or import them') }}</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
       <div class="card shadow-sm mb-3">
         <div class="card-body">
           <div class="d-flex align-items-baseline gap-2 mb-3">
             <span class="step-number">1</span>
             <label for="file" class="form-label fw-semibold mb-0">{{ _('Student responses') }}</label>
           </div>
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <fieldset>
+                <legend class="form-label fw-semibold fs-6">{{ _('Questions in this upload') }}</legend>
+                <div class="btn-group btn-group-sm" role="group" aria-label="{{ _('Questions in this upload') }}">
+                  {% for value, label in (('single', _('One question')), ('multiple', _('Multiple questions'))) %}
+                    <input type="radio" class="btn-check" name="question_mode"
+                           id="question_mode_{{ value }}" value="{{ value }}"
+                           {% if form.get('question_mode', 'single') == value %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="question_mode_{{ value }}">{{ label }}</label>
+                  {% endfor %}
+                </div>
+              </fieldset>
+            </div>
+            <div class="col-md-6">
+              <fieldset>
+                <legend class="form-label fw-semibold fs-6">{{ _('Students in this upload') }}</legend>
+                <div class="btn-group btn-group-sm" role="group" aria-label="{{ _('Students in this upload') }}">
+                  {% for value, label in (('single', _('One student')), ('multiple', _('Multiple students'))) %}
+                    <input type="radio" class="btn-check" name="student_mode"
+                           id="student_mode_{{ value }}" value="{{ value }}"
+                           {% if form.get('student_mode', 'multiple') == value %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="student_mode_{{ value }}">{{ label }}</label>
+                  {% endfor %}
+                </div>
+              </fieldset>
+            </div>
+          </div>
           <input type="file" class="form-control" id="file" name="file"
-                 accept=".csv,.xlsx" required>
+                 {% if form.get('student_mode', 'multiple') == 'multiple' %}multiple{% endif %}
+                 accept=".csv,.xlsx,.docx,.pdf,.txt" required>
           <div class="form-text">
-            {{ _('A .csv or .xlsx file with a student ID column and a response column. English or Arabic column headings both work') }}
-            (<code>student_id</code> / <code>response</code>, {{ _('or') }}
-            <span dir="rtl">&#1575;&#1604;&#1585;&#1602;&#1605; &#1575;&#1604;&#1580;&#1575;&#1605;&#1593;&#1610;</span> /
-            <span dir="rtl">&#1575;&#1604;&#1573;&#1580;&#1575;&#1576;&#1577;</span>).
-            {{ _('For a whole exam, use one answer column per question (<code>answer 1</code>, <code>answer 2</code>, &hellip;); you then set each question&#39;s ideal answer and marks on the next page.') }}
+            {{ _('For one student, upload one response file. For multiple students, upload a class list or several answer papers.') }}
+            {{ _('Two kinds of file work:') }}
+            <ul class="mb-0 ps-3">
+              <li>
+                {{ _('A class list: a .csv, .xlsx or Word table with a student ID column and a response column. English or Arabic column headings both work') }}
+                (<code>student_id</code> / <code>response</code>, {{ _('or') }}
+                <span dir="rtl">&#1575;&#1604;&#1585;&#1602;&#1605; &#1575;&#1604;&#1580;&#1575;&#1605;&#1593;&#1610;</span> /
+                <span dir="rtl">&#1575;&#1604;&#1573;&#1580;&#1575;&#1576;&#1577;</span>).
+                {{ _('For a whole exam, use one answer column per question (<code>answer 1</code>, <code>answer 2</code>, &hellip;); you then set each question&#39;s ideal answer and marks on the next page.') }}
+              </li>
+              <li>
+                {{ _('Answer papers: a .docx, .pdf or .txt file per student, holding one answer or the whole exam with each answer numbered (<code>Q1</code>, <code>1.</code>, <code>&#1587;1</code>&hellip;). The student ID is read from a line like <code>Student ID: 441001234</code> at the top, or else from the file name.') }}
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -59,24 +141,101 @@
             <span class="step-number">2</span>
             <label for="ideal_answer" class="form-label fw-semibold mb-0">{{ _('Ideal answer') }}</label>
           </div>
-          {{ fields.ideal_answer('', form, _('A textbook chapter or lecture slides (.pdf, .pptx, .docx or .txt). Upload only the relevant pages; long files are trimmed.')) }}
+          <div id="single-question-fields" {% if form.get('question_mode', 'single') == 'multiple' %}hidden{% endif %}>
+            {# One question: say plainly whether the answer comes from the
+               question bank, with the bank picker right here. #}
+            <div class="note-panel small mb-3">
+              {% if subject and bank_questions %}
+                {% set picked = bank_questions|selectattr('id', 'equalto', form.get('bank_question'))|first if form.get('bank_question') else none %}
+                {% if picked and picked['ideal_answer'] %}
+                  <div class="fw-semibold mb-1">{{ _('Answer taken from the question bank') }}</div>
+                  <p class="mb-2">{{ _('Its saved answer, rubric and marks are filled in below. Edit them if needed; changes are saved back to the bank.') }}</p>
+                {% elif picked %}
+                  <div class="fw-semibold mb-1">{{ _('Question taken from the question bank') }}</div>
+                  <p class="mb-2">{{ _('This question has no saved answer yet. Type it below, and it is saved to the bank for next time.') }}</p>
+                {% else %}
+                  <div class="fw-semibold mb-1">{{ _('Take the answer from the question bank?') }}</div>
+                  <p class="mb-2">{{ _('Pick a saved question of %(subject)s · %(exam)s, and its answer, rubric and marks are filled in for you. Or type the answer below.', subject=subject['name'], exam=exam_labels[form.get('exam_type')]) }}</p>
+                {% endif %}
+                <select class="form-select form-select-sm" id="bank_question_pick" data-reload="question"
+                        aria-label="{{ _('Question from the bank') }}" style="max-width: 36rem;">
+                  <option value="">{{ _('None, type the answer below') }}</option>
+                  {# Every saved question is listed; one without a model answer
+                     still fills its text and marks, and the typed answer is
+                     saved back to it. #}
+                  {% for q in bank_questions %}
+                    <option value="{{ q['id'] }}" {% if form.get('bank_question') == q['id'] %}selected{% endif %}>
+                      {{ q['position'] }}. {{ q['text']|truncate(60) }}{% if not q['ideal_answer'] %} {{ _('(no saved answer yet)') }}{% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+              {% elif subject %}
+                <div class="fw-semibold mb-1">{{ _('No saved questions for this exam yet') }}</div>
+                {{ _('Type the answer below, and it is saved to the %(subject)s question bank for next time.', subject=subject['name']) }}
+              {% else %}
+                <div class="fw-semibold mb-1">{{ _('Take the answer from the question bank?') }}</div>
+                <p class="mb-2">{{ _('Choose a subject at the top of the page, then pick one of its saved questions, and its answer, rubric and marks are filled in for you. Or type the answer below.') }}</p>
+                {% if subjects %}
+                  <button type="button" class="btn btn-sm btn-outline-primary" data-focus-subject>{{ _('Choose a subject') }}</button>
+                {% else %}
+                  <a class="btn btn-sm btn-outline-primary" href="{{ url_for('subjects.index') }}">{{ _('Add a subject') }}</a>
+                {% endif %}
+              {% endif %}
+            </div>
 
-          <hr class="my-4">
+            <div class="mb-3">
+              <label for="question_text" class="form-label fw-semibold">{{ _('Question text') }}</label>
+              <input type="text" class="form-control" id="question_text" name="question_text"
+                     value="{{ form.get('question_text', '') }}" dir="auto">
+              <div class="form-text">
+                {% if subject %}
+                  {{ _('This question and its answer details will be saved to %(subject)s question bank automatically. If blank, the detected question label from the uploaded file will be used.', subject=subject['name']) }}
+                {% else %}
+                  {{ _('Select a subject above if you want to save this question to your question bank.') }}
+                {% endif %}
+              </div>
+            </div>
+            {{ fields.ideal_answer('', form, _('A textbook chapter or lecture slides (.pdf, .pptx, .docx or .txt). Upload only the relevant pages; long files are trimmed.')) }}
 
-          <label for="rubric" class="form-label fw-semibold">{{ _('Grading rubric') }} <span class="text-body-secondary fw-normal">{{ _('(optional)') }}</span></label>
-          <textarea class="form-control" id="rubric" name="rubric"
-                    rows="3" dir="auto">{{ form.get('rubric', '') }}</textarea>
-          <div class="form-text">
-            {{ _('How marks should be awarded. Supplying this measurably improves consistency, so it is worth a sentence or two.') }}
+            <hr class="my-4">
+
+            <label for="rubric" class="form-label fw-semibold">{{ _('Grading rubric') }} <span class="text-body-secondary fw-normal">{{ _('(optional)') }}</span></label>
+            <textarea class="form-control" id="rubric" name="rubric"
+                      rows="3" dir="auto">{{ form.get('rubric', '') }}</textarea>
+            <div class="form-text">
+              {{ _('How marks should be awarded. Supplying this measurably improves consistency, so it is worth a sentence or two.') }}
+            </div>
+
+            {{ fields.parts('', form, 'max_score') }}
+
+            <div class="mt-3" style="max-width: 12rem;">
+              <label for="max_score" class="form-label fw-semibold">{{ _('Maximum score') }}</label>
+              {# For an exam file this is each question's starting value. #}
+              <input type="number" class="form-control" id="max_score" name="max_score"
+                     value="{{ form.get('max_score', '10') }}" min="1" max="1000" step="0.5" required>
+            </div>
           </div>
 
-          {{ fields.parts('', form, 'max_score') }}
-
-          <div class="mt-3" style="max-width: 12rem;">
-            <label for="max_score" class="form-label fw-semibold">{{ _('Maximum score') }}</label>
-            {# For an exam file this is each question's starting value. #}
-            <input type="number" class="form-control" id="max_score" name="max_score"
-                   value="{{ form.get('max_score', '10') }}" min="1" max="1000" step="0.5" required>
+          {# Multiple questions: say plainly whether the answers come from the
+             question bank, and if no subject is chosen, offer to pick one. #}
+          <div id="multiple-question-help" class="note-panel small" {% if form.get('question_mode', 'single') != 'multiple' %}hidden{% endif %}>
+            {% if subject and bank_questions %}
+              <div class="fw-semibold mb-1">{{ _('Answers will be taken from the question bank') }}</div>
+              {{ _('The saved questions of %(subject)s · %(exam)s (%(count)s) fill questions 1, 2, 3… in order, with their answers, rubrics and marks. You can review and edit them on the next step; changes are saved back to the bank.', subject=subject['name'], exam=exam_labels[form.get('exam_type')], count=bank_questions|length) }}
+            {% elif subject %}
+              <div class="fw-semibold mb-1">{{ _('No saved questions for this exam yet') }}</div>
+              {{ _('Set up each question on the next step, and they are saved to the %(subject)s question bank for next time.', subject=subject['name']) }}
+            {% else %}
+              <div class="fw-semibold mb-1">{{ _('Take the answers from the question bank?') }}</div>
+              <p class="mb-2">
+                {{ _('Choose a subject and exam at the top of the page, and each question’s saved answer, rubric and marks are filled in for you. Or continue without one and type them on the next step.') }}
+              </p>
+              {% if subjects %}
+                <button type="button" class="btn btn-sm btn-outline-primary" data-focus-subject>{{ _('Choose a subject') }}</button>
+              {% else %}
+                <a class="btn btn-sm btn-outline-primary" href="{{ url_for('subjects.index') }}">{{ _('Add a subject') }}</a>
+              {% endif %}
+            {% endif %}
           </div>
         </div>
       </div>
@@ -84,7 +243,7 @@
       <div class="d-flex align-items-baseline gap-2 mb-3">
         <span class="step-number">3</span>
         <button type="submit" class="btn btn-primary btn-lg" id="grade-btn">
-          {{ _('Grade responses') }}
+          {{ _('Continue to question setup') if form.get('question_mode', 'single') == 'multiple' else _('Grade responses') }}
         </button>
       </div>
     </form>
@@ -100,8 +259,129 @@
 {% block scripts %}
 <script src="{{ url_for('static', filename='answer-fields.js') }}"></script>
 <script>
+  const uploadForm = document.getElementById('upload-form');
+
+  // Picking a subject or exam reloads the page, which would wipe anything typed
+  // below. Fields the instructor changed are kept in sessionStorage across that
+  // one reload and put back. Picking a bank question is different: its saved
+  // answer is meant to replace what is there, so nothing is carried over then.
+  const DRAFT_KEY = 'qayyem-upload-draft';
+  const DRAFT_FIELDS = ['question_text', 'ideal_answer', 'rubric', 'max_score'];
+
+  function partValues() {
+    return Array.from(uploadForm.querySelectorAll('#single-question-fields [data-part-row]')).map(function (row) {
+      return [row.querySelector('[name="part_name"]').value, row.querySelector('[name="part_marks"]').value];
+    });
+  }
+  const initialParts = JSON.stringify(partValues());
+
+  function saveDraft() {
+    const draft = {};
+    DRAFT_FIELDS.forEach(function (name) {
+      const field = uploadForm.elements[name];
+      if (field && field.value !== field.defaultValue) { draft[name] = field.value; }
+    });
+    const source = uploadForm.querySelector('input[name="ideal_source"]:checked');
+    if (source && !source.defaultChecked) { draft.ideal_source = source.value; }
+    if (JSON.stringify(partValues()) !== initialParts) { draft.parts = partValues(); }
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch (e) { /* private mode */ }
+  }
+
+  function restoreDraft() {
+    let draft = null;
+    try {
+      draft = JSON.parse(sessionStorage.getItem(DRAFT_KEY));
+      sessionStorage.removeItem(DRAFT_KEY);
+    } catch (e) { return; }
+    if (!draft) { return; }
+
+    if (draft.ideal_source) {
+      const radio = uploadForm.querySelector('input[name="ideal_source"][value="' + draft.ideal_source + '"]');
+      if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change')); }
+    }
+    if (draft.parts) {
+      const box = uploadForm.querySelector('#single-question-fields [data-parts]');
+      const rows = box.querySelector('[data-part-rows]');
+      const template = box.querySelector('[data-part-template]');
+      rows.replaceChildren();
+      draft.parts.forEach(function (values) {
+        rows.appendChild(template.content.cloneNode(true));
+        const row = rows.lastElementChild;
+        row.querySelector('[name="part_name"]').value = values[0];
+        row.querySelector('[name="part_marks"]').value = values[1];
+      });
+      // Lets answer-fields.js recompute the maximum score from the parts.
+      rows.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    DRAFT_FIELDS.forEach(function (name) {
+      const field = uploadForm.elements[name];
+      if (!field || !(name in draft)) { return; }
+      if (name === 'max_score' && draft.parts && draft.parts.length) { return; }
+      field.value = draft[name];
+    });
+  }
+  restoreDraft();
+
+  document.querySelectorAll('[data-focus-subject]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const select = document.getElementById('subject_id');
+      select.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      select.focus({ preventScroll: true });
+    });
+  });
+
+  document.querySelectorAll('[data-reload]').forEach(function (select) {
+    select.addEventListener('change', function () {
+      if (select.dataset.reload !== 'question') { saveDraft(); }
+      var url = new URL({{ url_for('upload.new')|tojson }}, window.location.href);
+      var subject = document.getElementById('subject_id').value;
+      if (subject) { url.searchParams.set('subject', subject); }
+      if (select.dataset.reload === 'question' && select.value) {
+        url.searchParams.set('question', select.value);
+      }
+      var exam = document.getElementById('exam_type');
+      if (exam && select.dataset.reload !== 'subject') { url.searchParams.set('exam', exam.value); }
+      var mode = document.querySelector('input[name="question_mode"]:checked');
+      if (mode) { url.searchParams.set('question_mode', mode.value); }
+      var studentMode = document.querySelector('input[name="student_mode"]:checked');
+      if (studentMode) { url.searchParams.set('student_mode', studentMode.value); }
+      window.location.href = url.toString();
+    });
+  });
+
+  const modeInputs = document.querySelectorAll('input[name="question_mode"]');
+  const studentModeInputs = document.querySelectorAll('input[name="student_mode"]');
+  const singleFields = document.getElementById('single-question-fields');
+  const multiHelp = document.getElementById('multiple-question-help');
+  const bankQuestionSelect = document.getElementById('bank_question_pick');
+  const bankQuestionValue = document.querySelector('input[name="bank_question"]');
+  const gradeButton = document.getElementById('grade-btn');
+  const fileInput = document.getElementById('file');
+  function updateQuestionMode() {
+    const multiple = document.querySelector('input[name="question_mode"]:checked').value === 'multiple';
+    singleFields.hidden = multiple;
+    multiHelp.hidden = !multiple;
+    if (multiple) {
+      if (bankQuestionSelect) { bankQuestionSelect.value = ''; }
+      if (bankQuestionValue) { bankQuestionValue.value = ''; bankQuestionValue.disabled = true; }
+      gradeButton.textContent = {{ _('Continue to question setup')|tojson }};
+    } else {
+      if (bankQuestionValue) { bankQuestionValue.disabled = false; }
+      gradeButton.textContent = {{ _('Grade responses')|tojson }};
+    }
+  }
+  function updateStudentMode() {
+    const singleStudent = document.querySelector('input[name="student_mode"]:checked').value === 'single';
+    if (singleStudent && fileInput.files.length > 1) { fileInput.value = ''; }
+    fileInput.multiple = !singleStudent;
+  }
+  modeInputs.forEach(function (input) { input.addEventListener('change', updateQuestionMode); });
+  studentModeInputs.forEach(function (input) { input.addEventListener('change', updateStudentMode); });
+  updateQuestionMode();
+  updateStudentMode();
+
   // UC-3: prevent a duplicate submission while the upload is in flight.
-  document.querySelector('form').addEventListener('submit', function (event) {
+  uploadForm.addEventListener('submit', function (event) {
     const button = document.getElementById('grade-btn');
     if (button.disabled) { event.preventDefault(); return; }
     button.disabled = true;

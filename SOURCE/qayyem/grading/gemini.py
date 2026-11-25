@@ -53,16 +53,20 @@ class GeminiGrader(Grader):
             raise GraderError("Model did not return valid JSON: " + str(exc)) from exc
         return validate_results(parsed, [i.student_id for i in items], max_score, parts)
 
-    def _generate(self, prompt):
+    def complete(self, system, prompt):
+        return self._generate(prompt, schema=None, system=system)
+
+    def _generate(self, prompt, schema=RESPONSE_SCHEMA, system=None):
         """POST the prompt, retrying transient failures with backoff."""
+        config = {"responseMimeType": "application/json", "temperature": 0.2}
+        if schema is not None:
+            config["responseSchema"] = schema
         body = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "responseMimeType": "application/json",
-                "responseSchema": RESPONSE_SCHEMA,
-                "temperature": 0.2,
-            },
+            "generationConfig": config,
         }
+        if system:
+            body["systemInstruction"] = {"parts": [{"text": system}]}
         url = ENDPOINT.format(model=self.model)
         last_error = None
 

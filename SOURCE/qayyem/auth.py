@@ -1,7 +1,8 @@
 """Instructor authentication, session expiry, and the retention purge.
 
-Accounts are created only by the `create-instructor` CLI command; there is no
-self-registration route, per SS 4.1.
+Instructors create their own account on the sign-up page, which can be
+switched off or limited to the university's email domain in config.py; the
+`create-instructor` CLI command remains for administrators.
 
 Three requirements meet in this module:
   SS 4.3.3  passwords are hashed, sessions expire after inactivity
@@ -13,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 from flask import (
     Blueprint,
+    abort,
     current_app,
     flash,
     g,
@@ -22,7 +24,10 @@ from flask import (
     session,
     url_for,
 )
-from werkzeug.security import check_password_hash
+import re
+import sqlite3
+
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import security
 from .db import get_db, purge_instructor_data
@@ -146,16 +151,94 @@ def login():
             flash(_("Incorrect email or password."), "danger")
         else:
             throttle.reset(key)
-            session.clear()
-            session.permanent = True
-            session[USER_ID] = row["id"]
-            session[LAST_SEEN] = _now().isoformat()
+            _sign_in(row["id"])
             destination = request.args.get("next") or ""
             if not destination.startswith("/"):
                 destination = url_for("upload.new")
             return redirect(destination)
 
     return render_template("login.html")
+
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MIN_PASSWORD = 8
+
+
+def _sign_in(instructor_id):
+    session.clear()
+    session.permanent = True
+    session[USER_ID] = instructor_id
+    session[LAST_SEEN] = _now().isoformat()
+
+
+def _signup_errors(name, email, password, confirm):
+    errors = []
+    if not name:
+        errors.append(_("Enter your full name."))
+    if not EMAIL_RE.match(email):
+        errors.append(_("Enter a valid email address."))
+    else:
+        domains = current_app.config.get("SIGNUP_EMAIL_DOMAINS") or []
+        if domains and email.rsplit("@", 1)[1] not in domains:
+            errors.append(_("Sign up with your university email (%(domains)s).",
+                            domains=", ".join("@" + d for d in domains)))
+    if len(password) < MIN_PASSWORD:
+        errors.append(_("The password must be at least %(count)s characters.",
+                        count=MIN_PASSWORD))
+    elif password != confirm:
+        errors.append(_("The two passwords do not match."))
+    return errors
+
+
+@bp.route("/signup", methods=("GET", "POST"))
+def signup():
+    if not current_app.config.get("SIGNUP_ENABLED", True):
+        abort(404)
+    if g.get("instructor") is not None:
+        return redirect(url_for("upload.new"))
+
+    form = {"full_name": "", "email": ""}
+    if request.method == "POST":
+        form = {
+            "full_name": (request.form.get("full_name") or "").strip(),
+            "email": (request.form.get("email") or "").strip().lower(),
+        }
+        password = request.form.get("password") or ""
+
+        # Shares the sign-in throttle, so the form cannot be used to create
+        # accounts, or probe for existing ones, at speed.
+        throttle = security.throttle()
+        key = security.client_key()
+        max_attempts = int(current_app.config.get("LOGIN_MAX_ATTEMPTS", 5))
+        window = 60 * int(current_app.config.get("LOGIN_LOCKOUT_MINUTES", 15))
+        if throttle.retry_after(key, max_attempts, window):
+            flash(_("Too many attempts. Try again later."), "danger")
+            return render_template("signup.html", form=form), 429
+
+        errors = _signup_errors(form["full_name"], form["email"], password,
+                                request.form.get("confirm") or "")
+        if not errors:
+            db = get_db()
+            try:
+                instructor_id = db.execute(
+                    "INSERT INTO instructor (email, password_hash, full_name) VALUES (?, ?, ?)",
+                    (form["email"], generate_password_hash(password), form["full_name"]),
+                ).lastrowid
+                db.commit()
+            except sqlite3.IntegrityError:
+                throttle.record_failure(key)
+                errors.append(_("An account already exists for that email. Sign in instead."))
+            else:
+                _sign_in(instructor_id)
+                flash(_("Welcome to Qayyem, %(name)s. Your account is ready.",
+                        name=form["full_name"]), "success")
+                return redirect(url_for("subjects.index"))
+
+        for message in errors:
+            flash(message, "danger")
+        return render_template("signup.html", form=form), 400
+
+    return render_template("signup.html", form=form)
 
 
 @bp.route("/logout", methods=("POST",))

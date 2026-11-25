@@ -5,7 +5,7 @@ Run the development server with:
     flask --app app run
 
 Qayyem: AI-powered Arabic assignment grading and feedback system.
-College of Computing & Informatics, Saudi Electronic University.
+College of Computing & Informatics, Prince Musaid bin Abdulrahman University.
 """
 import os
 from datetime import timedelta
@@ -13,7 +13,7 @@ from datetime import timedelta
 from flask import Flask, render_template
 
 from config import Config
-from qayyem import auth, db, i18n, results, security, settings, upload
+from qayyem import auth, db, i18n, results, security, settings, subjects, upload
 from qayyem.i18n import gettext as _
 
 
@@ -29,7 +29,8 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path, exist_ok=True)
         app.config["DATABASE"] = os.path.join(app.instance_path, "qayyem.sqlite3")
 
-    app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024
+    # Several answer papers can go up together; each file is still capped at 8 MB.
+    app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024
     app.permanent_session_lifetime = timedelta(
         minutes=int(app.config.get("SESSION_TIMEOUT_MINUTES", 30))
     )
@@ -44,6 +45,7 @@ def create_app(test_config=None):
     app.register_blueprint(upload.bp)
     app.register_blueprint(results.bp)
     app.register_blueprint(settings.bp)
+    app.register_blueprint(subjects.bp)
 
     @app.errorhandler(400)
     def bad_request(error):
@@ -58,7 +60,7 @@ def create_app(test_config=None):
     @app.errorhandler(413)
     def too_large(error):  # noqa: ARG001
         return render_template("error.html", code=413,
-                               message=_("That upload is larger than 8 MB.")), 413
+                               message=_("That upload is larger than 32 MB.")), 413
 
     @app.errorhandler(500)
     def server_error(error):

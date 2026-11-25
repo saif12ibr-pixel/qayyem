@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Create an account') }} &mdash; {{ _('Qayyem') }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h1 class="h4 mb-1">{{ _('Create an account') }}</h1>
+        <p class="text-body-secondary small mb-4">
+          {{ _('For instructors. Your subjects and question banks are kept with your account; student answers are deleted when you sign out.') }}
+        </p>
+
+        <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-3">
+            <label for="full_name" class="form-label">{{ _('Full name') }}</label>
+            <input type="text" class="form-control" id="full_name" name="full_name" dir="auto"
+                   value="{{ form.full_name }}" required autofocus autocomplete="name">
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">{{ _('Email') }}</label>
+            <input type="email" class="form-control" id="email" name="email" dir="ltr"
+                   value="{{ form.email }}" required autocomplete="username">
+            {% if config.SIGNUP_EMAIL_DOMAINS %}
+              <div class="form-text">{{ _('Use your university email (%(domains)s).', domains='@' ~ config.SIGNUP_EMAIL_DOMAINS|join(', @')) }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label for="password" class="form-label">{{ _('Password') }}</label>
+            <input type="password" class="form-control" id="password" name="password"
+                   minlength="8" required autocomplete="new-password">
+            <div class="form-text">{{ _('At least 8 characters.') }}</div>
+          </div>
+          <div class="mb-4">
+            <label for="confirm" class="form-label">{{ _('Confirm password') }}</label>
+            <input type="password" class="form-control" id="confirm" name="confirm"
+                   minlength="8" required autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">{{ _('Create account') }}</button>
+        </form>
+
+        <p class="text-center small mt-3 mb-0">
+          {{ _('Already have an account?') }}
+          <a href="{{ url_for('auth.login') }}">{{ _('Sign in') }}</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

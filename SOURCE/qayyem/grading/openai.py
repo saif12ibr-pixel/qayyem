@@ -55,16 +55,16 @@ class OpenAIGrader(Grader):
             raise GraderError("Model did not return valid JSON: " + str(exc)) from exc
         return validate_results(parsed, [i.student_id for i in items], max_score, parts)
 
-    def _generate(self, prompt):
+    def complete(self, system, prompt):
+        return self._generate(prompt, system)
+
+    def _generate(self, prompt, system="You grade short Arabic student answers and "
+                                       "reply only with JSON."):
         """POST the prompt, retrying transient failures with backoff."""
         body = {
             "model": self.model,
             "messages": [
-                {
-                    "role": "system",
-                    "content": "You grade short Arabic student answers and reply "
-                               "only with JSON.",
-                },
+                {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
             ],
             # json_object guarantees parseable JSON but always returns an object,

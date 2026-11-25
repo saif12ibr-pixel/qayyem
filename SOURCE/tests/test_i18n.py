@@ -84,7 +84,7 @@ def test_arabic_upload_error(client, auth):
         content_type="multipart/form-data",
     )
     assert response.status_code == 400
-    assert "تُدعم ملفات" in response.data.decode("utf-8")
+    assert "غير مدعوم" in response.data.decode("utf-8")
 
 
 def test_language_switch_will_not_redirect_off_site(client):

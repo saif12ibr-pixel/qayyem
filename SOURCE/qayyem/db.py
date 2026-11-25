@@ -1,8 +1,8 @@
 """SQLite access, schema setup, and the admin CLI commands.
 
-Instructor accounts are created only through the `create-instructor` CLI
-command. There is no self-registration route, per SS 4.1 (Product Features,
-Instructor Authentication).
+Instructors create their own account on the sign-up page (see auth.py); the
+`create-instructor` CLI command remains for administrators, and for when
+sign-up is switched off.
 """
 import pathlib
 import sqlite3
@@ -99,6 +99,50 @@ def ensure_schema_current(database_path):
             columns = {row["name"] for row in conn.execute("PRAGMA table_info(" + table + ")")}
             if columns and column not in columns:
                 conn.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " TEXT")
+
+        # Subjects with their question banks, and reviewing grades on the site.
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS subject (
+                   id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                   instructor_id INTEGER NOT NULL REFERENCES instructor(id) ON DELETE CASCADE,
+                   name          TEXT NOT NULL,
+                   code          TEXT,
+                   rubric        TEXT,
+                   created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+               )"""
+        )
+        conn.execute(
+            """CREATE TABLE IF NOT EXISTS bank_question (
+                   id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                   subject_id   INTEGER NOT NULL REFERENCES subject(id) ON DELETE CASCADE,
+                   position     INTEGER NOT NULL,
+                   text         TEXT NOT NULL,
+                   options      TEXT,
+                   ideal_answer TEXT,
+                   rubric       TEXT,
+                   max_score    REAL NOT NULL DEFAULT 1,
+                   parts        TEXT
+               )"""
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_subject_instructor ON subject(instructor_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_bank_subject ON bank_question(subject_id)")
+        for table, column, ddl in (
+            ("assignment", "subject_id",
+             "INTEGER REFERENCES subject(id) ON DELETE SET NULL"),
+            ("grading_result", "reviewed_at", "TEXT"),
+            ("grading_result", "ai_score", "REAL"),
+            # The question each answer was given to, shown when reviewing.
+            ("assignment", "question_text", "TEXT"),
+            ("assignment", "question_options", "TEXT"),
+            ("question", "question_text", "TEXT"),
+            ("question", "question_options", "TEXT"),
+            # Each subject's bank is split into its exams.
+            ("bank_question", "exam_type", "TEXT NOT NULL DEFAULT 'assignment'"),
+            ("assignment", "exam_type", "TEXT"),
+        ):
+            columns = {row["name"] for row in conn.execute("PRAGMA table_info(" + table + ")")}
+            if columns and column not in columns:
+                conn.execute("ALTER TABLE " + table + " ADD COLUMN " + column + " " + ddl)
         conn.commit()
     finally:
         conn.close()

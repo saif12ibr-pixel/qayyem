@@ -53,6 +53,16 @@ def _header(sheet, columns):
     sheet.freeze_panes = "A2"
 
 
+def note_for(row):
+    """The Note column: a grading error, or that the instructor changed the
+    model's grade (and what the model gave)."""
+    if row.get("reviewed_at"):
+        ai = row.get("ai_score")
+        return "Reviewed by the instructor" + (
+            " (AI score " + format_score(ai) + ")" if ai is not None else "")
+    return row.get("error") or ""
+
+
 def _score(cell, value):
     cell.value = value if value is not None else "-"
     cell.alignment = CENTER
@@ -94,7 +104,7 @@ def build_workbook(assignment, results, questions=()):
         feedback = sheet.cell(row=offset, column=3, value=row["feedback_ar"] or "")
         feedback.alignment = RTL
 
-        note = sheet.cell(row=offset, column=4, value=row["error"] or "")
+        note = sheet.cell(row=offset, column=4, value=note_for(dict(row)))
         note.alignment = LTR
 
         if in_parts:
@@ -143,7 +153,7 @@ def _build_exam_workbook(assignment, results, questions):
                         ).alignment = LTR
             _score(detail.cell(row=offset, column=3), answer["score"])
             detail.cell(row=offset, column=4, value=answer["feedback_ar"] or "").alignment = RTL
-            detail.cell(row=offset, column=5, value=answer["error"] or "").alignment = LTR
+            detail.cell(row=offset, column=5, value=note_for(dict(answer))).alignment = LTR
             detail.cell(row=offset, column=6,
                         value=format_breakdown(answer.get("breakdown") or [])).alignment = LTR
             offset += 1
@@ -197,6 +207,8 @@ def _add_metadata_sheet(book, assignment, results):
         ("Ideal answer", assignment["ideal_answer"]),
         ("Rubric", assignment["rubric"] or "-"),
     ]
+    if "exam_type" in assignment.keys() and assignment["exam_type"]:
+        rows.insert(1, ("Exam", assignment["exam_type"].capitalize()))
     parts = assignment.get("parts") if hasattr(assignment, "get") else assignment["parts"]
     if parts:
         rows.append(("Parts", "; ".join(
@@ -215,6 +227,73 @@ def _add_metadata_sheet(book, assignment, results):
     return sheet
 
 
+BAND_NAMES = {"low": "Low", "average": "Average", "high": "High"}
+
+
+def build_student_workbook(assignment, student, ranked_count):
+    """One student's results as a workbook: a summary, then every answer with
+    its score, the student's own text and the feedback."""
+    book = Workbook()
+    sheet = book.active
+    sheet.title = "Student"
+
+    def pct(value):
+        return format_score(value) + "%" if value is not None else "-"
+
+    summary = [
+        ("Student ID", student["student_id"]),
+        ("Assignment", assignment["title"]),
+        ("Graded on", assignment["created_at"]),
+        ("Total", (format_score(student["total"]) if student["total"] is not None else "-")
+         + " / " + format_score(student["max_score"])),
+        ("Percentage", pct(student["percent"])),
+        ("Average per question", pct(student["average_percent"])),
+        ("Rank", "%s of %s" % (student["rank"], ranked_count) if student["rank"] else "-"),
+        ("Group", BAND_NAMES.get(student["band"], "-")),
+    ]
+    if student["best"]:
+        best = student["best"]
+        summary.append(("Highest question", "%s: %s / %s (%s)" % (
+            best["label"], format_score(best["score"]), format_score(best["max_score"]),
+            pct(best["percent"]))))
+    for index, (label, value) in enumerate(summary, start=1):
+        key = sheet.cell(row=index, column=1, value=label)
+        key.font = Font(bold=True)
+        sheet.cell(row=index, column=2, value=value).alignment = LTR
+
+    columns = [("Question", 22), ("Score", 10), ("Out of", 10), ("Percentage", 12),
+               ("Student answer", 60), ("Feedback (Arabic)", 70), ("Note", 28)]
+    top = len(summary) + 2
+    for index, (title, width) in enumerate(columns, start=1):
+        cell = sheet.cell(row=top, column=index, value=title)
+        cell.fill = HEADER_FILL
+        cell.font = HEADER_FONT
+        cell.alignment = CENTER
+        sheet.column_dimensions[get_column_letter(index)].width = max(
+            width, sheet.column_dimensions[get_column_letter(index)].width or 0)
+    for offset, answer in enumerate(student["answers"], start=top + 1):
+        sheet.cell(row=offset, column=1, value=answer["label"]).alignment = LTR
+        _score(sheet.cell(row=offset, column=2), answer["score"])
+        _score(sheet.cell(row=offset, column=3), answer["max_score"])
+        sheet.cell(row=offset, column=4, value=pct(answer["percent"])).alignment = CENTER
+        sheet.cell(row=offset, column=5, value=answer["response_text"] or "").alignment = Alignment(
+            vertical="top", wrap_text=True)
+        sheet.cell(row=offset, column=6, value=answer["feedback_ar"] or "").alignment = RTL
+        sheet.cell(row=offset, column=7, value=note_for(dict(answer))).alignment = LTR
+    sheet.column_dimensions["A"].width = 24
+    sheet.column_dimensions["B"].width = 40
+
+    stream = io.BytesIO()
+    book.save(stream)
+    return stream.getvalue()
+
+
+def student_filename_for(assignment, student_id):
+    """"qayyem-midterm-441001234.xlsx"."""
+    safe = "".join(ch if (ch.isalnum() or ch in "-_") else "_" for ch in student_id)[:40] or "student"
+    return filename_for(assignment)[: -len(".xlsx")] + "-" + safe + ".xlsx"
+
+
 def filename_for(assignment):
     """A safe download filename derived from the assignment title.
 
@@ -231,3 +310,93 @@ def filename_for(assignment):
         ch if (ch.isalnum() or ch in " -_") else "_" for ch in title
     ).strip("_ ") or "results"
     return "qayyem-" + base.replace(" ", "-")[:60] + ".xlsx"
+
+
+CORRECT_FILL = PatternFill("solid", fgColor="D1F2E0")
+CORRECT_FONT = Font(bold=True, color="0F5132")
+STAR = "★"
+
+
+def _arabic_share(texts):
+    letters = "".join(texts)
+    arabic = sum(1 for ch in letters if "؀" <= ch <= "ۿ")
+    latin = sum(1 for ch in letters if ch.isascii() and ch.isalpha())
+    return arabic > latin
+
+
+def build_bank_workbook(subject, questions):
+    """A subject's question bank as a sheet: one row per question, a column
+    per choice, and a star beside the correct one."""
+    book = Workbook()
+    sheet = book.active
+    sheet.title = "Questions"
+
+    parsed = [json.loads(q["options"]) if q["options"] else None for q in questions]
+    choice_count = max((len(o) for o in parsed if o), default=0)
+    columns = [("No.", 6), ("Question", 50), ("Type", 14)]
+    columns += [("Choice " + str(i + 1), 22) for i in range(choice_count)]
+    columns += [("Correct / model answer", 50), ("Marks", 8), ("Rubric", 40)]
+    _header(sheet, columns)
+
+    arabic = _arabic_share([q["text"] for q in questions])
+    text_align = RTL if arabic else LTR
+    if arabic:
+        sheet.sheet_view.rightToLeft = True
+
+    for offset, (q, options) in enumerate(zip(questions, parsed), start=2):
+        sheet.cell(row=offset, column=1, value=q["position"]).alignment = CENTER
+        sheet.cell(row=offset, column=2, value=q["text"]).alignment = text_align
+        sheet.cell(row=offset, column=3,
+                   value="MSQ" if options else "Open question").alignment = LTR
+        for index, option in enumerate(options or [], start=4):
+            label = option["label"] + ") " + option["text"]
+            cell = sheet.cell(row=offset, column=index,
+                              value=(STAR + " " + label) if option["correct"] else label)
+            cell.alignment = text_align
+            if option["correct"]:
+                cell.fill = CORRECT_FILL
+                cell.font = CORRECT_FONT
+        answer_column = 4 + choice_count
+        answer = sheet.cell(row=offset, column=answer_column,
+                            value=(STAR + " " + q["ideal_answer"]) if q["ideal_answer"] else "-")
+        answer.alignment = text_align
+        if q["ideal_answer"]:
+            answer.font = CORRECT_FONT
+        _score(sheet.cell(row=offset, column=answer_column + 1), q["max_score"])
+        sheet.cell(row=offset, column=answer_column + 2,
+                   value=q["rubric"] or "").alignment = text_align
+
+    info = book.create_sheet("Subject")
+    info.column_dimensions["A"].width = 18
+    info.column_dimensions["B"].width = 60
+    total = sum(q["max_score"] for q in questions)
+    for index, (label, value) in enumerate((
+        ("Subject", subject["name"]),
+        ("Code", subject["code"] or "-"),
+        ("Questions", len(questions)),
+        ("Total marks", total),
+        ("Grading guidelines", subject["rubric"] or "-"),
+    ), start=1):
+        info.cell(row=index, column=1, value=label).font = Font(bold=True)
+        info.cell(row=index, column=2, value=value).alignment = Alignment(
+            wrap_text=True, vertical="top")
+
+    stream = io.BytesIO()
+    book.save(stream)
+    return stream.getvalue()
+
+
+def safe_filename(prefix, title, extension):
+    base = "".join(ch if (ch.isalnum() or ch in " -_") else "_" for ch in title or "")
+    base = base.strip("_ ") or "export"
+    return prefix + base.replace(" ", "-")[:60] + extension
+
+
+def attachment_header(filename):
+    """Content-Disposition for a download whose name may be Arabic: an ASCII
+    fallback plus the UTF-8 name (RFC 6266), since the header is latin-1."""
+    from urllib.parse import quote
+
+    fallback = "".join(ch if ch.isascii() and (ch.isalnum() or ch in "-_.") else "_"
+                       for ch in filename)
+    return 'attachment; filename="%s"; filename*=UTF-8\'\'%s' % (fallback, quote(filename))

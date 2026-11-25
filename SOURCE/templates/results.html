@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_review.html" as review with context %}
 {% block title %}{{ _('Results') }} &mdash; {{ _('Qayyem') }}{% endblock %}
 
 {% block content %}
@@ -6,9 +7,16 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
   <div>
+    {% if subject %}
+      <a class="small" href="{{ url_for('subjects.detail', subject_id=subject['id']) }}" dir="auto">{{ subject['name'] }}</a>
+    {% endif %}
     <h1 class="h4 mb-1">{{ assignment['title'] }}</h1>
     <p class="text-body-secondary small mb-0">
-      {{ _('Graded %(when)s &middot; out of %(max)s', when=assignment['created_at'], max=assignment['max_score']) }}
+      {{ _('Graded %(when)s &middot; out of %(max)s', when=assignment['created_at'], max=assignment['max_score']|score) }}
+      {% if assignment['exam_type'] %}
+        {% set type_labels = {'assignment': _('Assignment'), 'quiz': _('Quiz'), 'midterm': _('Midterm'), 'final': _('Final')} %}
+        &middot; {{ type_labels.get(assignment['exam_type'], assignment['exam_type']) }}
+      {% endif %}
     </p>
   </div>
   <div class="d-flex gap-2">
@@ -77,6 +85,170 @@
   </div>
 {% endif %}
 
+{% if assignment['status'] == 'complete' and overview %}
+  {% set band_names = {'low': _('Low'), 'average': _('Average'), 'high': _('High')} %}
+  {% set band_ranges = {
+       'low': _('below %(low)s%%', low=bands.low),
+       'average': _('%(low)s–%(high)s%%', low=bands.low, high=bands.high - 1),
+       'high': _('%(high)s%% and above', high=bands.high)} %}
+  {% set band_style = {'low': 'danger', 'average': 'warning', 'high': 'success'} %}
+
+  <div class="row g-3 mb-4">
+    {# The highest-scoring students. #}
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 mb-3">{{ _('Top %(count)s students', count=overview.top|length) }}</h2>
+          <table class="table table-sm align-middle mb-0">
+            <thead class="table-head">
+              <tr>
+                <th style="width: 3rem;">#</th>
+                <th>{{ _('Student ID') }}</th>
+                <th class="text-center">{{ _('Score') }}</th>
+                <th class="text-center">{{ _('Percentage') }}</th>
+                {% if questions %}<th class="text-center">{{ _('Average per question') }}</th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in overview.top %}
+                <tr>
+                  <td class="fw-semibold">{{ s.rank }}</td>
+                  <td><button type="button" class="btn btn-link btn-sm p-0 font-monospace" data-show-student="{{ s.student_id }}">{{ s.student_id }}</button></td>
+                  <td class="text-center">{{ s.total|score }} <span class="text-body-secondary small">/ {{ s.max_score|score }}</span></td>
+                  <td class="text-center">{{ s.percent|score }}%</td>
+                  {% if questions %}<td class="text-center">{{ s.average_percent|score }}%</td>{% endif %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <p class="small text-body-secondary mt-3 mb-0">
+            {{ _('Highest: %(high)s (%(high_pct)s%%) · Lowest: %(low)s (%(low_pct)s%%)',
+                 high=overview.highest.student_id, high_pct=overview.highest.percent|score,
+                 low=overview.lowest.student_id, low_pct=overview.lowest.percent|score) }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    {# Everyone graded, in low / average / high groups, lowest first. #}
+    <div class="col-lg-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h6 mb-3">{{ _('Student groups') }}</h2>
+          {% for band, members in overview.bands %}
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-baseline small mb-1">
+                <span>
+                  <span class="badge text-bg-{{ band_style[band] }}">{{ band_names[band] }}</span>
+                  <span class="text-body-secondary">{{ band_ranges[band] }}</span>
+                </span>
+                <span class="fw-semibold">{{ _('%(count)s of %(total)s students', count=members|length, total=overview.graded) }}</span>
+              </div>
+              <div class="progress mb-2" style="height: 0.4rem;" role="presentation">
+                <div class="progress-bar bg-{{ band_style[band] }}" style="width: {{ (members|length / overview.graded * 100)|round(1) }}%"></div>
+              </div>
+              <div class="d-flex flex-wrap gap-1">
+                {% for s in members %}
+                  <button type="button" class="btn btn-sm btn-outline-secondary py-0 font-monospace"
+                          data-show-student="{{ s.student_id }}" title="{{ s.percent|score }}%">
+                    {{ s.student_id }} <span class="text-body-secondary">{{ s.percent|score }}%</span>
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# Find one student: their grades, averages and answers, and their own Excel file. #}
+  <div class="card shadow-sm mb-4" id="student-search">
+    <div class="card-body">
+      <label for="student-query" class="h6 d-block mb-2">{{ _('Find a student') }}</label>
+      <input type="search" class="form-control" id="student-query" list="student-ids" autocomplete="off"
+             placeholder="{{ _('Type a student ID') }}" style="max-width: 24rem;">
+      <datalist id="student-ids">
+        {% for s in summaries %}<option value="{{ s.student_id }}">{% endfor %}
+      </datalist>
+      <p class="small text-body-secondary mt-2 mb-0" id="student-none" hidden>{{ _('No student with that ID.') }}</p>
+
+      {% for s in summaries %}
+        <div class="student-panel mt-3" data-student="{{ s.student_id }}" hidden>
+          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+            <div>
+              <div class="h5 mb-1 font-monospace">{{ s.student_id }}</div>
+              {% if s.band %}
+                <span class="badge text-bg-{{ band_style[s.band] }}">{{ band_names[s.band] }}</span>
+                <span class="small text-body-secondary">{{ _('Rank %(rank)s of %(total)s', rank=s.rank, total=overview.graded) }}</span>
+              {% endif %}
+            </div>
+            <a class="btn btn-sm btn-success"
+               href="{{ url_for('results.export_student', assignment_id=assignment['id'], student=s.student_id) }}">
+              {{ _('Download Excel for this student') }}
+            </a>
+          </div>
+
+          <div class="row g-2 mb-3">
+            <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body py-2">
+              <div class="stat-value">{{ s.total|score if s.total is not none else '&mdash;'|safe }}<span class="small text-body-secondary"> / {{ s.max_score|score }}</span></div>
+              <div class="stat-label">{{ _('Total') }}</div>
+            </div></div></div>
+            <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body py-2">
+              <div class="stat-value">{{ (s.percent|score ~ '%') if s.percent is not none else '&mdash;'|safe }}</div>
+              <div class="stat-label">{{ _('Percentage') }}</div>
+            </div></div></div>
+            {% if s.answers|length > 1 %}
+              <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body py-2">
+                <div class="stat-value">{{ (s.average_percent|score ~ '%') if s.average_percent is not none else '&mdash;'|safe }}</div>
+                <div class="stat-label">{{ _('Average per question') }}</div>
+              </div></div></div>
+              <div class="col-6 col-md-3"><div class="card stat-card h-100"><div class="card-body py-2">
+                <div class="stat-value">{{ s.best.label if s.best else '&mdash;'|safe }}{% if s.best %}<span class="small text-body-secondary"> {{ s.best.percent|score }}%</span>{% endif %}</div>
+                <div class="stat-label">{{ _('Highest question') }}</div>
+              </div></div></div>
+            {% endif %}
+          </div>
+
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <thead class="table-head">
+                <tr>
+                  <th style="width: 5rem;">{{ _('Question') }}</th>
+                  <th class="text-center" style="width: 7rem;">{{ _('Score') }}</th>
+                  <th>{{ _('Student answer') }}</th>
+                  <th>{{ _('Feedback') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in s.answers %}
+                  <tr>
+                    <td>{{ a.label }}</td>
+                    <td class="text-center">
+                      {% if a.score is not none %}{{ a.score|score }} <span class="text-body-secondary small">/ {{ a.max_score|score }}</span>{% else %}&mdash;{% endif %}
+                    </td>
+                    <td class="small bank-text" dir="auto">{{ a.response_text }}</td>
+                    <td>{% if a.feedback_ar %}<div dir="rtl" lang="ar" class="feedback-ar small">{{ a.feedback_ar }}</div>{% endif %}</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+
+{% if editable %}
+  <p class="small text-body-secondary mb-3">
+    {{ _('Check the grades here before downloading: press <strong>Review</strong> on any answer to read it and change its score or feedback.') }}
+    {% if summary.reviewed %}
+      <span class="badge rounded-pill text-bg-info ms-1">{{ _('%(count)s reviewed', count=summary.reviewed) }}</span>
+    {% endif %}
+  </p>
+{% endif %}
+
 {% if questions %}
 {# An exam: per-question scores and a total per student, then the feedback. #}
 <div class="card shadow-sm mb-4">
@@ -88,12 +260,12 @@
           {% for q in questions %}
             <th class="text-center" dir="auto">
               {{ _('Q%(n)s', n=q['position']) }}
-              <div class="small fw-normal">/ {{ q['max_score'] }}</div>
+              <div class="small fw-normal">/ {{ q['max_score']|score }}</div>
             </th>
           {% endfor %}
           <th class="text-center">
             {{ _('Total') }}
-            <div class="small fw-normal">/ {{ assignment['max_score'] }}</div>
+            <div class="small fw-normal">/ {{ assignment['max_score']|score }}</div>
           </th>
         </tr>
       </thead>
@@ -127,15 +299,16 @@
           </tr>
           {% for a in s['answers'] %}
             {% set q = questions[loop.index0] %}
-            <tr>
+            <tr id="r{{ a['response_id'] }}">
               <td style="width: 10rem;" class="small" dir="auto">{{ _('Q%(n)s', n=q['position']) }} &middot; {{ q['title'] }}</td>
               <td style="width: 6rem;" class="text-center">
                 {% if a['score'] is not none %}
-                  <span class="fw-semibold">{{ a['score'] }}</span>
-                  <span class="text-body-secondary small">/ {{ q['max_score'] }}</span>
+                  <span class="fw-semibold">{{ a['score']|score }}</span>
+                  <span class="text-body-secondary small">/ {{ q['max_score']|score }}</span>
                 {% else %}
                   <span class="text-body-secondary">&mdash;</span>
                 {% endif %}
+                <div>{{ review.badge(a) }}</div>
               </td>
               <td>
                 {% if a['breakdown'] %}
@@ -148,6 +321,10 @@
                 {% endif %}
                 {% if a['error'] %}
                   <div class="small text-danger mt-1">{{ a['error']|translate }}</div>
+                {% endif %}
+                {% if editable %}
+                  {{ review.toggle(a) }}
+                  {{ review.panel(assignment, a) }}
                 {% endif %}
               </td>
             </tr>
@@ -170,15 +347,16 @@
       </thead>
       <tbody>
         {% for row in rows %}
-          <tr>
+          <tr id="r{{ row['response_id'] }}">
             <td class="font-monospace small">{{ row['student_id'] }}</td>
             <td class="text-center">
               {% if row['score'] is not none %}
-                <span class="fw-semibold">{{ row['score'] }}</span>
-                <span class="text-body-secondary small">/ {{ assignment['max_score'] }}</span>
+                <span class="fw-semibold">{{ row['score']|score }}</span>
+                <span class="text-body-secondary small">/ {{ assignment['max_score']|score }}</span>
               {% else %}
                 <span class="text-body-secondary">&mdash;</span>
               {% endif %}
+              <div>{{ review.badge(row) }}</div>
             </td>
             <td>
               {% if row['breakdown'] %}
@@ -192,6 +370,10 @@
               {% if row['error'] %}
                 <div class="small text-danger mt-1">{{ row['error']|translate }}</div>
               {% endif %}
+              {% if editable %}
+                {{ review.toggle(row) }}
+                {{ review.panel(assignment, row) }}
+              {% endif %}
             </td>
           </tr>
         {% endfor %}
@@ -203,6 +385,38 @@
 {% endblock %}
 
 {% block scripts %}
+{% if overview %}
+<script>
+  // Student search: show the panel of the student whose ID was typed or
+  // clicked. Panels are already on the page, so nothing is fetched.
+  (function () {
+    const input = document.getElementById('student-query');
+    const none = document.getElementById('student-none');
+    const panels = Array.from(document.querySelectorAll('.student-panel'));
+
+    function show(query) {
+      const wanted = query.trim().toLowerCase();
+      let match = panels.find(function (p) { return p.dataset.student.toLowerCase() === wanted; });
+      if (!match && wanted) {
+        const partial = panels.filter(function (p) { return p.dataset.student.toLowerCase().includes(wanted); });
+        if (partial.length === 1) { match = partial[0]; }
+      }
+      panels.forEach(function (p) { p.hidden = p !== match; });
+      none.hidden = !wanted || Boolean(match) ||
+        panels.some(function (p) { return p.dataset.student.toLowerCase().includes(wanted); });
+    }
+
+    input.addEventListener('input', function () { show(input.value); });
+    document.querySelectorAll('[data-show-student]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        input.value = button.dataset.showStudent;
+        show(input.value);
+        document.getElementById('student-search').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  })();
+</script>
+{% endif %}
 {% if running %}
 <script>
   // UC-3 requires a processing indicator while grading runs. Grading happens on

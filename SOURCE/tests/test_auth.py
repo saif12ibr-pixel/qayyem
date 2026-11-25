@@ -43,10 +43,10 @@ def test_login_page_renders(client):
     assert b"Instructor sign in" in response.data
 
 
-def test_no_self_registration_route(client):
-    """SS 4.1: accounts are created by an administrator only."""
-    assert client.get("/register").status_code == 404
-    assert client.post("/register").status_code == 404
+def test_signup_can_be_switched_off(client, app):
+    app.config["SIGNUP_ENABLED"] = False
+    assert client.get("/signup").status_code == 404
+    assert client.post("/signup").status_code == 404
 
 
 def test_successful_login_sets_session(client, app):

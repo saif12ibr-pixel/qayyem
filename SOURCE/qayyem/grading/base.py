@@ -79,3 +79,12 @@ class Grader(ABC):
         given. Raise GraderTransientError for retryable failures and
         GraderError for permanent ones.
         """
+
+    def complete(self, system: str, prompt: str) -> str:
+        """Send one request outside grading and return the model's JSON reply
+        as text. Used to read the questions out of a Word file.
+
+        A grader that performs no inference raises NotImplementedError, and
+        callers fall back to doing the work without a model.
+        """
+        raise NotImplementedError

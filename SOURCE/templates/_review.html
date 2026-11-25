@@ -1,0 +1,75 @@
+{#
+  Reviewing one answer on the results page: the student's answer, and a form
+  to change the score (or each part's score) and the feedback. The panel stays
+  collapsed until "Review" is pressed.
+#}
+
+{% macro badge(a) %}
+  {% if a['reviewed_at'] %}
+    <span class="badge rounded-pill text-bg-info"
+          title="{{ _('AI score: %(score)s', score=a['ai_score']|score) if a['ai_score'] is not none else '' }}">{{ _('Reviewed') }}</span>
+  {% endif %}
+{% endmacro %}
+
+
+{% macro toggle(a) %}
+  <button type="button" class="btn btn-link btn-sm p-0 review-toggle" data-bs-toggle="collapse"
+          data-bs-target="#review-{{ a['response_id'] }}" aria-expanded="false"
+          aria-controls="review-{{ a['response_id'] }}">{{ _('Review') }}</button>
+{% endmacro %}
+
+
+{% macro panel(assignment, a) %}
+  <div class="collapse" id="review-{{ a['response_id'] }}">
+    <div class="review-panel mt-2">
+      {% if a['question'] %}
+        <div class="small text-body-secondary mb-1">{{ _('Question') }}</div>
+        <div class="review-question mb-3" dir="auto">
+          <div class="question-text">{{ a['question']['text'] }}</div>
+          {% if a['question']['options'] %}
+            <ul class="list-unstyled mb-0 mt-1">
+              {% for o in a['question']['options'] %}
+                <li class="{% if o['correct'] %}fw-semibold{% endif %}">{{ o['label'] }}) {{ o['text'] }}{% if o['correct'] %} &#9733;{% endif %}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endif %}
+      <div class="small text-body-secondary mb-1">{{ _('Student&#39;s answer') }}</div>
+      <div class="student-answer mb-3" dir="auto">{{ a['response_text'] or '—' }}</div>
+
+      <form method="post" action="{{ url_for('results.review', assignment_id=assignment['id'], response_id=a['response_id']) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="d-flex flex-wrap gap-3 mb-2">
+          {% if a['scheme'] %}
+            {% for p in a['scheme'] %}
+              {% set current = a['breakdown'][loop.index0]['score'] if a['breakdown'] else none %}
+              <div>
+                <label class="form-label small mb-1" for="ps-{{ a['response_id'] }}-{{ loop.index }}" dir="auto">{{ p['name'] }} <span class="text-body-secondary">/ {{ p['marks']|score }}</span></label>
+                <input type="number" class="form-control form-control-sm" style="width: 6.5rem;"
+                       id="ps-{{ a['response_id'] }}-{{ loop.index }}" name="part_score"
+                       value="{{ current|score if current is not none else '' }}" min="0" max="{{ p['marks'] }}" step="0.25" required>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div>
+              <label class="form-label small mb-1" for="score-{{ a['response_id'] }}">{{ _('Score') }} <span class="text-body-secondary">/ {{ a['max_score']|score }}</span></label>
+              <input type="number" class="form-control form-control-sm" style="width: 6.5rem;"
+                     id="score-{{ a['response_id'] }}" name="score"
+                     value="{{ a['score']|score if a['score'] is not none else '' }}"
+                     min="0" max="{{ a['max_score'] }}" step="0.25" required>
+            </div>
+          {% endif %}
+        </div>
+        <label class="form-label small mb-1" for="fb-{{ a['response_id'] }}">{{ _('Feedback to the student') }}</label>
+        <textarea class="form-control form-control-sm" id="fb-{{ a['response_id'] }}" name="feedback_ar"
+                  rows="3" dir="rtl" lang="ar">{{ a['feedback_ar'] or '' }}</textarea>
+        <div class="d-flex gap-2 mt-2">
+          <button type="submit" class="btn btn-sm btn-primary">{{ _('Save grade') }}</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse"
+                  data-bs-target="#review-{{ a['response_id'] }}">{{ _('Cancel') }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endmacro %}

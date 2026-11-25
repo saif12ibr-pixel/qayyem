@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Subjects') }} &mdash; {{ _('Qayyem') }}{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-1">{{ _('Subjects') }}</h1>
+    <p class="text-body-secondary small mb-0">
+      {{ _('Each subject keeps its own questions, model answers, marks and grading guidelines.') }}
+    </p>
+  </div>
+</div>
+
+<div class="row g-3">
+  {% for s in subjects %}
+    <div class="col-md-6 col-lg-4">
+      <a class="card shadow-sm h-100 subject-card text-decoration-none" href="{{ url_for('subjects.detail', subject_id=s['id']) }}">
+        <div class="card-body">
+          {% if s['code'] %}<div class="small text-body-secondary font-monospace mb-1" dir="auto">{{ s['code'] }}</div>{% endif %}
+          <div class="h6 mb-3" dir="auto">{{ s['name'] }}</div>
+          <div class="small text-body-secondary">
+            {{ _('%(count)s question(s) &middot; %(marks)s marks', count=s['question_count'], marks=s['total_marks']|score) }}
+          </div>
+        </div>
+      </a>
+    </div>
+  {% endfor %}
+
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-sm h-100 border-dashed">
+      <div class="card-body">
+        <div class="h6 mb-3">{{ _('Add a subject') }}</div>
+        <form method="post" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="mb-2">
+            <label for="name" class="form-label small mb-1">{{ _('Subject name') }}</label>
+            <input type="text" class="form-control" id="name" name="name" dir="auto" maxlength="120"
+                   value="{{ form.get('name', '') }}" placeholder="{{ _('e.g. Operating Systems') }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="code" class="form-label small mb-1">{{ _('Course code') }} <span class="text-body-secondary">{{ _('(optional)') }}</span></label>
+            <input type="text" class="form-control" id="code" name="code" dir="auto" maxlength="30"
+                   value="{{ form.get('code', '') }}" placeholder="{{ _('e.g. IT241') }}">
+          </div>
+          <button type="submit" class="btn btn-primary w-100">{{ _('Create subject') }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

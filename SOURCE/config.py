@@ -37,4 +37,12 @@ class Config:
     LOGIN_MAX_ATTEMPTS = _int("LOGIN_MAX_ATTEMPTS", 5)
     LOGIN_LOCKOUT_MINUTES = _int("LOGIN_LOCKOUT_MINUTES", 15)
 
+    # Instructors can create their own account. SIGNUP_EMAIL_DOMAINS limits it
+    # to the university's addresses, e.g. "seu.edu.sa"; empty allows any.
+    SIGNUP_ENABLED = os.environ.get("SIGNUP_ENABLED", "1") not in ("0", "false", "no")
+    SIGNUP_EMAIL_DOMAINS = [
+        d.strip().lower().lstrip("@")
+        for d in os.environ.get("SIGNUP_EMAIL_DOMAINS", "").split(",") if d.strip()
+    ]
+
     DATABASE = os.environ.get("DATABASE")  # set by app factory when None

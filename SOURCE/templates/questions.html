@@ -14,6 +14,16 @@
     <form method="post" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+      {% if subject %}
+        <div class="note-panel small mb-3">
+          {{ _('Qayyem loads saved answers, rubrics, marks, and parts from the %(subject)s question bank by question order when available. New questions and your edits are saved back automatically when you start grading.', subject=subject['name']) }}
+        </div>
+      {% else %}
+        <div class="note-panel small mb-3">
+          {{ _('No subject is selected, so these questions will not be saved to a question bank.') }}
+        </div>
+      {% endif %}
+
       {% for q in questions %}
         {% set suffix = q['id']|string %}
         {% set field_suffix = '_' ~ suffix %}
@@ -23,6 +33,25 @@
               <span class="step-number">{{ q['position'] }}</span>
               <span class="fw-semibold" dir="auto">{{ q['title'] }}</span>
             </div>
+            {% if subject %}
+              <div class="mb-3">
+                <label for="question_text_{{ suffix }}" class="form-label fw-semibold">
+                  {{ _('Question text (saved to question bank)') }}
+                </label>
+                <input type="text" class="form-control" id="question_text_{{ suffix }}"
+                       name="question_text{{ field_suffix }}"
+                       value="{{ form.get('question_text' ~ field_suffix, q['title']) }}"
+                       placeholder="{{ q['title'] }}"
+                       dir="auto" required>
+                <div class="form-text">{{ _('Check that this is the full question, not just an answer-column heading.') }}</div>
+              </div>
+            {% endif %}
+            {% if banked and banked.get(q['position']) %}
+              <div class="note-panel small mb-3" dir="auto">
+                <span class="text-body-secondary">{{ _('From the %(subject)s question bank:', subject=subject['name']) }}</span>
+                {{ banked[q['position']]['text'] }}
+              </div>
+            {% endif %}
 
             <div class="form-label fw-semibold">{{ _('Ideal answer') }}</div>
             {{ fields.ideal_answer(field_suffix, form, _('Upload only the pages this question covers; long files are trimmed.')) }}

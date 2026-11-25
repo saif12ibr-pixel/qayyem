@@ -1,7 +1,7 @@
 # Qayyem (قيّم) — SOURCE
 
 AI-powered Arabic assignment grading and feedback system.
-Senior Project II (CS489) — College of Computing & Informatics, Saudi Electronic University.
+Senior Project II (CS489) — College of Computing & Informatics, Prince Musaid bin Abdulrahman University.
 
 An instructor uploads a CSV/Excel file of short Arabic student answers plus an
 ideal answer, and Qayyem returns a preliminary score and individual Arabic
@@ -10,8 +10,11 @@ feedback for every student, viewable in a dashboard and downloadable as Excel.
 ## Quick start (Windows)
 
 Double-click **`run.bat`**. It creates the virtual environment, installs
-dependencies, prepares the database, asks you to create a login, and starts the
-server. Run it again after adding your API key.
+dependencies, prepares the database, starts the server and opens the browser on
+the sign-up page, where you create your instructor account. Add an AI key
+either in `.env` or under **Settings** in the app. Running it again later
+installs any new dependencies and upgrades the database, keeping accounts,
+subjects and question banks.
 
 ## Manual setup
 
@@ -42,8 +45,41 @@ Get a free API key at <https://aistudio.google.com/apikey>.
 | `flask --app app run` | Start the server |
 | `python -m pytest` | Run the test suite (offline, no API key needed) |
 
-There is deliberately no sign-up page: accounts are created only with
-`create-instructor`, per the Product Features section of the Phase 1 report.
+Instructors can also create their own account at `/signup`. Set
+`SIGNUP_EMAIL_DOMAINS=seu.edu.sa` in `.env` to accept university addresses
+only, or `SIGNUP_ENABLED=0` to turn sign-up off and use `create-instructor`.
+
+## Subjects and question banks
+
+Each instructor adds their subjects under **Subjects**. A subject keeps its
+own question bank, grading guidelines and grading sessions. Questions are
+typed in, or imported from the Word file the exam was written in:
+
+```
+1. Which of these schedules processes? (1 mark)
+   a) The compiler
+   b) The kernel *
+   c) The BIOS
+
+2. Define an operating system. [5 marks]
+   * Software that manages the computer hardware.
+```
+
+A star (`*`) marks the correct choice, or the model answer of a written
+question (`Answer:` / `الإجابة:` works too). Arabic numbering and letters
+(`١.`, `أ-`) and Word's automatic numbering are understood. The bank downloads
+as Excel with the correct answers starred. When grading, choosing the subject
+fills each question's model answer, rubric and marks from the bank.
+
+Question banks are teaching material, not student data, so they are kept
+across sessions.
+
+## Reviewing grades
+
+On the results page, **Review** opens an answer: the student's text, its
+score (or each part's score) and the feedback, all editable. A changed grade
+is marked "Reviewed", keeps the AI's original score for the record, and is
+noted in the Excel download.
 
 ## How it works
 
@@ -76,9 +112,11 @@ app.py                 Flask application factory and entry point
 config.py              Configuration, read from .env
 qayyem/
   db.py, schema.sql    SQLite access, schema, admin CLI
-  auth.py              Login, session expiry, retention purge
+  auth.py              Sign-up, login, session expiry, retention purge
   upload.py            Upload and start grading
-  results.py           Dashboard, status polling, Excel download
+  results.py           Dashboard, reviewing grades, status polling, Excel download
+  subjects.py, bank.py Subjects and their question banks
+  question_doc.py      Reads questions and starred answers from Word
   parsing.py           CSV/Excel reading, encoding and header handling
   export.py            Excel generation with right-to-left Arabic
   jobs.py              Background grading worker and progress

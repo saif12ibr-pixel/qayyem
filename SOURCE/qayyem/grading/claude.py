@@ -45,12 +45,25 @@ class ClaudeGrader(Grader):
         if not items:
             return []
         prompt = build_prompt(items, ideal_answer, rubric, max_score, parts)
+        text = self._send(SYSTEM, prompt)
+        import json
 
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise GraderError("Model did not return valid JSON: " + str(exc)) from exc
+        return validate_results(parsed, [i.student_id for i in items], max_score, parts)
+
+    def complete(self, system, prompt):
+        return self._send(system, prompt)
+
+    def _send(self, system, prompt):
+        """One Messages API call, its errors mapped onto the Grader types."""
         try:
             response = self._client.messages.create(
                 model=self.model,
                 max_tokens=MAX_TOKENS,
-                system=SYSTEM,
+                system=system,
                 messages=[{"role": "user", "content": prompt}],
             )
         except anthropic.AuthenticationError as exc:
@@ -81,14 +94,7 @@ class ClaudeGrader(Grader):
                 "API returned {0}. {1}".format(exc.status_code, str(exc)[:200])
             ) from exc
 
-        text = self._extract_text(response)
-        import json
-
-        try:
-            parsed = json.loads(text)
-        except json.JSONDecodeError as exc:
-            raise GraderError("Model did not return valid JSON: " + str(exc)) from exc
-        return validate_results(parsed, [i.student_id for i in items], max_score, parts)
+        return self._extract_text(response)
 
     @staticmethod
     def _extract_text(response):

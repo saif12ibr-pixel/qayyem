@@ -23,7 +23,7 @@
             <th>{{ _('File') }}</th>
             <th class="text-center" style="width: 7rem;">{{ _('Responses') }}</th>
             <th style="width: 11rem;">{{ _('Status') }}</th>
-            <th style="width: 12rem;"></th>
+            <th style="width: 15rem;"></th>
           </tr>
         </thead>
         <tbody>
@@ -31,7 +31,9 @@
             <tr>
               <td>
                 <a href="{{ url_for('results.detail', assignment_id=a['id']) }}">{{ a['title'] }}</a>
-                <div class="small text-body-secondary">{{ a['created_at'] }}</div>
+                <div class="small text-body-secondary">
+                  {% if a['subject_name'] %}<span dir="auto">{{ a['subject_name'] }}</span> &middot; {% endif %}{{ a['created_at'] }}
+                </div>
               </td>
               <td class="text-center">{{ a['response_count'] }}</td>
               <td>
@@ -51,7 +53,11 @@
                   </span>
                 {% endif %}
               </td>
-              <td class="text-end">
+              <td class="text-end text-nowrap">
+                {% if a['status'] in ('complete', 'failed') %}
+                  <a class="btn btn-sm btn-outline-primary"
+                     href="{{ url_for('results.detail', assignment_id=a['id']) }}">{{ _('Review') }}</a>
+                {% endif %}
                 {% if a['status'] == 'complete' %}
                   <a class="btn btn-sm btn-outline-success"
                      href="{{ url_for('results.export', assignment_id=a['id']) }}">{{ _('Download Excel') }}</a>
@@ -67,5 +73,20 @@
   <p class="form-text mt-3">
     {{ _('These are deleted when you sign out or your session expires (data-retention requirement). Download anything you need to keep.') }}
   </p>
+
+  {# The only place that signs out while results are undownloaded: it sits
+     beside the download buttons, so the loss is visible before it happens. #}
+  {% if pending_exports %}
+    <div class="d-flex justify-content-end mt-4">
+      <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="confirm" value="1">
+        <button class="btn btn-sm btn-outline-danger"
+                onclick="return confirm({{ _('You have %(count)s graded result set(s) you have not downloaded. Signing out permanently deletes them. Continue?', count=pending_exports)|string|tojson|forceescape }})">
+          {{ _('Sign out and delete') }}
+        </button>
+      </form>
+    </div>
+  {% endif %}
 {% endif %}
 {% endblock %}

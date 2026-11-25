@@ -19,3 +19,7 @@ uploads/
 Thumbs.db
 .DS_Store
 ~$*
+
+# Local backup copies of documents
+DOCUMENTS/backup/
+*_backup-*

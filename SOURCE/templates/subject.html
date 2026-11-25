@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+{% block title %}{{ subject['name'] }} &mdash; {{ _('Qayyem') }}{% endblock %}
+
+{% block content %}
+{% set exam_labels = {'assignment': _('Assignment'), 'quiz': _('Quiz'), 'midterm': _('Midterm'), 'final': _('Final')} %}
+<nav class="small mb-2"><a href="{{ url_for('subjects.index') }}">&larr; {{ _('Subjects') }}</a></nav>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-4">
+  <div>
+    {% if subject['code'] %}<div class="small text-body-secondary font-monospace" dir="auto">{{ subject['code'] }}</div>{% endif %}
+    <h1 class="h4 mb-1" dir="auto">{{ subject['name'] }}</h1>
+    <p class="text-body-secondary small mb-0">
+      {{ exam_labels[exam] }} &middot;
+      {{ _('%(count)s question(s) &middot; %(marks)s marks', count=questions|length, marks=total|score) }}
+    </p>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('upload.new', subject=subject['id'], exam=exam) }}" class="btn btn-primary btn-sm">{{ _('Grade student answers') }}</a>
+    {% if questions %}
+      <a href="{{ url_for('subjects.export', subject_id=subject['id'], exam=exam) }}" class="btn btn-outline-success btn-sm">{{ _('Download questions (Excel)') }}</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 mb-1">{{ _('Import questions from Word') }}</h2>
+        <p class="small mb-2">{{ _('They are saved to the %(exam)s questions.', exam=exam_labels[exam]) }}</p>
+        <p class="small text-body-secondary mb-3">
+          {{ _('Upload the exam as you wrote it. The AI takes only the questions from it, with their choices, answers and marks, skipping the cover page, instructions and anything else; mark the correct choice or write the model answer in the file so it is copied too. You can review the questions here and download them as Excel.') }}
+        </p>
+        <form method="post" action="{{ url_for('subjects.import_word', subject_id=subject['id']) }}"
+              enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center" data-ai-import>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="exam_type" value="{{ exam }}">
+          <input type="file" class="form-control" name="document" accept=".docx" required
+                 style="max-width: 22rem;" aria-label="{{ _('Word file') }}">
+          {% if counts[exam] %}
+            <select class="form-select" name="mode" style="max-width: 15rem;" aria-label="{{ _('Existing questions') }}">
+              <option value="append">{{ _('Add to the existing questions') }}</option>
+              <option value="replace">{{ _('Replace the existing questions') }}</option>
+            </select>
+          {% endif %}
+          <button type="submit" class="btn btn-outline-primary">{{ _('Import') }}</button>
+        </form>
+        <details class="mt-3 small">
+          <summary class="text-body-secondary">{{ _('Without an AI provider, how should the Word file look?') }}</summary>
+          <div class="row g-2 mt-1">
+            <div class="col-sm-6">
+<pre class="format-sample mb-0" dir="ltr">1. Capital of Saudi Arabia? (1 mark)
+   a) Jeddah
+   b) Riyadh *
+   c) Dammam
+
+2. Define an operating system. [5 marks]
+   * Software that manages the hardware
+     and runs programs.</pre>
+            </div>
+            <div class="col-sm-6">
+<pre class="format-sample mb-0" dir="rtl">١. ما عاصمة المملكة؟ (1 درجة)
+   أ- جدة
+   ب- الرياض *
+   ج- الدمام
+
+٢. عرّف نظام التشغيل. [5 درجات]
+   الإجابة: برنامج يدير مكونات الحاسب.</pre>
+            </div>
+          </div>
+          <p class="mt-2 mb-0 text-body-secondary">
+            {{ _('Word&#39;s automatic numbering works too. Marks in brackets after a question are picked up; otherwise a choice question gets 1 mark and a written one 5, and you can change them below.') }}
+          </p>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card shadow-sm h-100">
+      <div class="card-body">
+        <h2 class="h6 mb-3">{{ _('Subject settings') }}</h2>
+        <form method="post" action="{{ url_for('subjects.edit', subject_id=subject['id']) }}" novalidate>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="row g-2 mb-2">
+            <div class="col-8">
+              <label for="name" class="form-label small mb-1">{{ _('Subject name') }}</label>
+              <input type="text" class="form-control form-control-sm" id="name" name="name" dir="auto"
+                     maxlength="120" value="{{ subject['name'] }}" required>
+            </div>
+            <div class="col-4">
+              <label for="code" class="form-label small mb-1">{{ _('Course code') }}</label>
+              <input type="text" class="form-control form-control-sm" id="code" name="code" dir="auto"
+                     maxlength="30" value="{{ subject['code'] or '' }}">
+            </div>
+          </div>
+          <label for="rubric" class="form-label small mb-1">{{ _('Grading guidelines') }}</label>
+          <textarea class="form-control form-control-sm" id="rubric" name="rubric" rows="3" dir="auto"
+                    placeholder="{{ _('e.g. Accept answers in Arabic or English. Deduct for missing key terms.') }}">{{ subject['rubric'] or '' }}</textarea>
+          <div class="form-text mb-2">{{ _('Applied to every question of this subject, on top of each question&#39;s own rubric.') }}</div>
+          <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-sm btn-outline-primary">{{ _('Save') }}</button>
+          </div>
+        </form>
+        <form method="post" action="{{ url_for('subjects.delete', subject_id=subject['id']) }}" class="mt-2 text-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button type="submit" class="btn btn-sm btn-link text-danger p-0"
+                  onclick="return confirm({{ _('Delete this subject and all its questions?')|string|tojson|forceescape }})">{{ _('Delete subject') }}</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2" id="questions">
+  <h2 class="h6 mb-0">{{ _('Question bank') }}</h2>
+  <a href="{{ url_for('subjects.new_question', subject_id=subject['id'], exam=exam) }}" class="btn btn-sm btn-outline-secondary">+ {{ _('Add question') }}</a>
+</div>
+
+{# The bank keeps each exam of the subject separately. #}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <ul class="nav nav-pills">
+    {% for t in exam_types %}
+      <li class="nav-item">
+        <a class="nav-link {% if t == exam %}active{% endif %}" {% if t == exam %}aria-current="page"{% endif %}
+           href="{{ url_for('subjects.detail', subject_id=subject['id'], exam=t, type=question_type, q=search or None) }}#questions">
+          {{ exam_labels[t] }} <span class="badge {% if t == exam %}text-bg-light{% else %}text-bg-secondary{% endif %}">{{ counts[t] }}</span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  <form method="get" action="{{ url_for('subjects.detail', subject_id=subject['id']) }}#questions" class="d-flex gap-2" role="search">
+    <input type="hidden" name="exam" value="{{ exam }}">
+    <input type="hidden" name="type" value="{{ question_type }}">
+    <input type="search" class="form-control form-control-sm" name="q" value="{{ search }}" dir="auto"
+           placeholder="{{ _('Search questions') }}" aria-label="{{ _('Search questions') }}" style="max-width: 16rem;">
+    <button type="submit" class="btn btn-sm btn-outline-secondary">{{ _('Search') }}</button>
+  </form>
+</div>
+
+<ul class="nav nav-pills mb-3" aria-label="{{ _('Filter question bank by type') }}">
+  {% for value in ('all', 'msq', 'open') %}
+    <li class="nav-item">
+      <a class="nav-link {% if question_type == value %}active{% endif %}"
+         {% if question_type == value %}aria-current="page"{% endif %}
+         href="{{ url_for('subjects.detail', subject_id=subject['id'], exam=exam, type=value, q=search or None) }}#questions">
+        {{ type_labels[value] }}
+        <span class="badge {% if question_type == value %}text-bg-light{% else %}text-bg-secondary{% endif %}">{{ type_counts[value] }}</span>
+      </a>
+    </li>
+  {% endfor %}
+</ul>
+
+{% if not questions and search %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-body text-center text-body-secondary py-5">
+      {{ _('No %(exam)s question matches “%(search)s”.', exam=exam_labels[exam], search=search) }}
+      <a href="{{ url_for('subjects.detail', subject_id=subject['id'], exam=exam) }}#questions">{{ _('Show all') }}</a>
+    </div>
+  </div>
+{% elif not questions %}
+  <div class="card shadow-sm mb-4">
+    <div class="card-body text-center text-body-secondary py-5">
+      {% if question_type != 'all' %}
+        {{ _('No %(type)s questions in this exam yet.', type=type_labels[question_type]) }}
+        <a href="{{ url_for('subjects.detail', subject_id=subject['id'], exam=exam, type='all') }}#questions">{{ _('Show all') }}</a>
+      {% else %}
+        {{ _('No %(exam)s questions yet. Import them from Word, or add them one by one.', exam=exam_labels[exam]) }}
+      {% endif %}
+    </div>
+  </div>
+{% else %}
+  <div class="card shadow-sm mb-4">
+    <ol class="list-group list-group-flush bank-list">
+      {% for q in questions %}
+        {% set opts = options[q['id']] %}
+        <li class="list-group-item py-3">
+          <div class="d-flex gap-3">
+            <span class="step-number">{{ q['position'] }}</span>
+            <div class="flex-grow-1 min-w-0">
+              <div class="d-flex flex-wrap justify-content-between gap-2">
+                <div class="fw-semibold bank-text" dir="auto">{{ q['text'] }}</div>
+                <div class="text-nowrap">
+                  <span class="badge text-bg-light border">{{ _('MSQ') if opts else _('Open question') }}</span>
+                  <span class="badge text-bg-primary">{{ _('%(marks)s mark(s)', marks=q['max_score']|score) }}</span>
+                </div>
+              </div>
+
+              {% if opts %}
+                <ul class="list-unstyled mt-2 mb-0 options" dir="auto">
+                  {% for o in opts %}
+                    <li class="{% if o['correct'] %}option-correct{% endif %}">
+                      <span class="option-label">{{ o['label'] }})</span> {{ o['text'] }}
+                      {% if o['correct'] %}<span class="star" title="{{ _('Correct answer') }}" aria-label="{{ _('Correct answer') }}">&#9733;</span>{% endif %}
+                    </li>
+                  {% endfor %}
+                </ul>
+                {% if not q['ideal_answer'] %}
+                  <div class="small text-warning-emphasis mt-1">{{ _('No choice is starred as correct yet.') }}</div>
+                {% endif %}
+              {% elif q['ideal_answer'] %}
+                <div class="model-answer mt-2" dir="auto"><span class="star" aria-hidden="true">&#9733;</span> {{ q['ideal_answer'] }}</div>
+              {% else %}
+                <div class="small text-warning-emphasis mt-2">{{ _('No model answer yet. Add one before grading this question.') }}</div>
+              {% endif %}
+
+              {% if q['parts'] %}
+                <div class="small text-body-secondary mt-1" dir="auto">
+                  {{ _('Parts:') }}
+                  {% for p in q['parts']|fromjson %}{{ p['name'] }} ({{ p['marks']|score }}){% if not loop.last %} &middot; {% endif %}{% endfor %}
+                </div>
+              {% endif %}
+              {% if q['rubric'] %}
+                <div class="small text-body-secondary mt-1" dir="auto">{{ _('Rubric:') }} {{ q['rubric'] }}</div>
+              {% endif %}
+
+              <div class="d-flex gap-3 mt-2 small">
+                <a href="{{ url_for('subjects.edit_question', subject_id=subject['id'], question_id=q['id']) }}">{{ _('Edit') }}</a>
+                {% if q['ideal_answer'] %}
+                  <a href="{{ url_for('upload.new', subject=subject['id'], exam=exam, question=q['id']) }}">{{ _('Grade answers to this question') }}</a>
+                {% endif %}
+                <form method="post" class="d-inline m-0"
+                      action="{{ url_for('subjects.delete_question', subject_id=subject['id'], question_id=q['id']) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button type="submit" class="btn btn-link btn-sm p-0 text-danger align-baseline"
+                          onclick="return confirm({{ _('Delete this question?')|string|tojson|forceescape }})">{{ _('Delete') }}</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </li>
+      {% endfor %}
+    </ol>
+  </div>
+{% endif %}
+
+{% if sessions %}
+  <h2 class="h6 mb-2">{{ _('Grading sessions for this subject') }}</h2>
+  <div class="card shadow-sm">
+    <div class="list-group list-group-flush">
+      {% for a in sessions %}
+        <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+           href="{{ url_for('results.detail', assignment_id=a['id']) }}">
+          <span>{{ a['title'] }} <span class="small text-body-secondary">&middot; {{ a['created_at'] }}</span></span>
+          <span class="small text-body-secondary">{{ _('%(count)s response(s)', count=a['response_count']) }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

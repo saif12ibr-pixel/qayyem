@@ -30,13 +30,12 @@
   </script>
 
   <title>{% block title %}Qayyem{% endblock %}</title>
+  {# Served from the project, not a CDN, so the app is fully styled offline. #}
   {% if text_dir == 'rtl' %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.rtl.min.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/fonts/plex-arabic.css') }}" rel="stylesheet">
   {% else %}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='vendor/bootstrap/bootstrap.min.css') }}" rel="stylesheet">
   {% endif %}
   <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
 </head>
@@ -49,21 +48,9 @@
       <span>Qayyem <span class="brand-ar" dir="rtl">&#1602;&#1610;&#1617;&#1605;</span></span>
     </a>
 
-    <div class="d-flex align-items-center gap-3">
-      {% if g.instructor %}
-        <a class="nav-link text-white-50" href="{{ url_for('upload.new') }}">{{ _('New grading') }}</a>
-        <a class="nav-link text-white-50" href="{{ url_for('results.index') }}">
-          {{ _('Results') }}
-          {% if pending_exports %}
-            <span class="badge text-bg-warning">{{ pending_exports }}</span>
-          {% endif %}
-        </a>
-        <a class="nav-link text-white-50" href="{{ url_for('settings.index') }}">{{ _('Settings') }}</a>
-        <span class="navbar-text small text-white-50 d-none d-md-inline">
-          {{ g.instructor['full_name'] or g.instructor['email'] }}
-        </span>
-      {% endif %}
-
+    {# Language, theme and the menu button stay visible at every width; the
+       page links fold into the menu below the large breakpoint. #}
+    <div class="d-flex align-items-center gap-2 ms-auto order-lg-last ms-lg-3">
       {# Each language is named in itself, so it is findable by someone who
          cannot read the current one. #}
       {% if lang == 'ar' %}
@@ -86,21 +73,53 @@
         </svg>
       </button>
 
+      {% if not g.instructor and config.SIGNUP_ENABLED and request.endpoint != 'auth.signup' %}
+        <a class="btn btn-sm btn-light" href="{{ url_for('auth.signup') }}">{{ _('Sign up') }}</a>
+      {% endif %}
+
       {% if g.instructor %}
-        <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          {% if pending_exports %}
-            <input type="hidden" name="confirm" value="1">
-            <button class="btn btn-sm btn-warning"
-                    onclick="return confirm({{ _('You have %(count)s graded result set(s) you have not downloaded. Signing out permanently deletes them. Continue?', count=pending_exports)|string|tojson|forceescape }})">
-              {{ _('Sign out and delete') }}
-            </button>
-          {% else %}
-            <button class="btn btn-sm btn-outline-light">{{ _('Sign out') }}</button>
-          {% endif %}
-        </form>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav"
+                aria-controls="main-nav" aria-expanded="false" aria-label="{{ _('Menu') }}">
+          <span class="navbar-toggler-icon"></span>
+        </button>
       {% endif %}
     </div>
+
+    {% if g.instructor %}
+      <div class="collapse navbar-collapse" id="main-nav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          {% for endpoint, section, label in (
+               ('upload.new', 'upload', _('New grading')),
+               ('subjects.index', 'subjects', _('Subjects')),
+               ('results.index', 'results', _('Results')),
+               ('settings.index', 'settings', _('Settings'))) %}
+            {% set current = request.blueprint == section %}
+            <li class="nav-item">
+              <a class="nav-link{% if current %} active{% endif %}" href="{{ url_for(endpoint) }}"
+                 {% if current %}aria-current="page"{% endif %}>
+                {{ label }}
+                {% if section == 'results' and pending_exports %}
+                  <span class="badge text-bg-warning">{{ pending_exports }}</span>
+                {% endif %}
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+
+        <div class="d-flex align-items-center gap-3 pb-2 pb-lg-0">
+          <span class="navbar-text small">
+            {{ g.instructor['full_name'] or g.instructor['email'] }}
+          </span>
+          {# Always a plain sign-out. With results not yet downloaded, the server
+             stops and shows them on the Results page, where deleting them is a
+             separate, deliberate button. #}
+          <form method="post" action="{{ url_for('auth.logout') }}" class="m-0">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-light">{{ _('Sign out') }}</button>
+          </form>
+        </div>
+      </div>
+    {% endif %}
   </div>
 </nav>
 
@@ -120,10 +139,10 @@
 </main>
 
 <footer class="container py-4 text-center text-body-secondary small">
-  {{ _('Qayyem &mdash; College of Computing &amp; Informatics, Saudi Electronic University') }}
+  {{ _('Qayyem &mdash; College of Computing &amp; Informatics, Prince Musaid bin Abdulrahman University') }}
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='vendor/bootstrap/bootstrap.bundle.min.js') }}"></script>
 
 <script>
   (function () {
@@ -146,6 +165,17 @@
       describe();
     });
   })();
+
+  // Reading a Word file with the AI takes a while; show it is working, and
+  // stop a second click sending the file twice.
+  document.querySelectorAll('form[data-ai-import]').forEach(function (form) {
+    form.addEventListener('submit', function (event) {
+      var button = form.querySelector('button[type=submit]');
+      if (button.disabled) { event.preventDefault(); return; }
+      button.disabled = true;
+      button.textContent = {{ _('Reading the file…')|string|tojson }};
+    });
+  });
 </script>
 
 {% block scripts %}{% endblock %}

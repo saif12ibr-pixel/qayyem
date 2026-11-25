@@ -8,7 +8,7 @@
       <div class="card-body p-4">
         <h1 class="h4 mb-1">{{ _('Instructor sign in') }}</h1>
         <p class="text-body-secondary small mb-4">
-          {{ _('Accounts are created by the system administrator.') }}
+          {{ _('Sign in to grade answers and manage your subjects.') }}
         </p>
 
         <form method="post" novalidate>
@@ -25,6 +25,12 @@
           </div>
           <button type="submit" class="btn btn-primary w-100">{{ _('Sign in') }}</button>
         </form>
+        {% if config.SIGNUP_ENABLED %}
+          <p class="text-center small mt-3 mb-0">
+            {{ _('New to Qayyem?') }}
+            <a href="{{ url_for('auth.signup') }}">{{ _('Create an account') }}</a>
+          </p>
+        {% endif %}
       </div>
     </div>
   </div>

@@ -13,12 +13,13 @@ from flask import (
     url_for,
 )
 
+from . import bank
 from .auth import login_required
 from .db import get_db
 from .settings import grading_readiness
 from .i18n import gettext as _
 from .jobs import run_grading_job, start_grading
-from .parsing import ParseError, parse_exam
+from .parsing import ParseError, parse_submissions
 from .reference import extract_reference_text
 
 bp = Blueprint("upload", __name__)
@@ -146,22 +147,122 @@ def _start(assignment_id, response_count):
     return redirect(url_for("results.detail", assignment_id=assignment_id))
 
 
+def combined_rubric(subject, rubric):
+    """The subject's grading guidelines followed by the question's own rubric."""
+    parts = [subject["rubric"] if subject else None, rubric]
+    return "\n".join(p for p in parts if p) or ""
+
+
+def question_rubric(subject, rubric):
+    """Remove the subject-wide guidance before storing a question's own rubric."""
+    rubric = (rubric or "").strip()
+    shared = (subject["rubric"] or "").strip() if subject else ""
+    if shared and rubric.startswith(shared):
+        rubric = rubric[len(shared):].lstrip("\n").strip()
+    return rubric or None
+
+
+def bank_form(subject, question, suffix=""):
+    """Form values for grading one of a subject's bank questions."""
+    form = {"rubric" + suffix: combined_rubric(subject, question["rubric"]),
+            "max_score" + suffix: "%g" % question["max_score"],
+            "question_text" + suffix: question["text"],
+            "parts" + suffix: _parts_from_json(question["parts"])}
+    if question["ideal_answer"]:
+        form["ideal_answer" + suffix] = question["ideal_answer"]
+        form["ideal_source" + suffix] = "text"
+    return form
+
+
+def save_bank_question(subject, exam, position, text, options, ideal_answer, rubric,
+                       max_score, parts, question_id=None):
+    """Save the reviewed question in its subject bank; return True if new."""
+    db = get_db()
+    rubric = question_rubric(subject, rubric)
+    if question_id:
+        db.execute(
+            "UPDATE bank_question SET text = ?, ideal_answer = ?, rubric = ?, "
+            "max_score = ?, parts = ? WHERE id = ? AND subject_id = ?",
+            (text, ideal_answer, rubric, max_score, parts, question_id, subject["id"]),
+        )
+        return False
+    db.execute(
+        "INSERT INTO bank_question "
+        "(subject_id, exam_type, position, text, options, ideal_answer, rubric, max_score, parts) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (subject["id"], exam, position, text, options, ideal_answer, rubric, max_score, parts),
+    )
+    return True
+
+
+def _render(form, status=200):
+    subject = bank.owned_subject(form.get("subject_id"), missing=None)
+    exam = bank.exam_type(form.get("exam_type"))
+    return render_template(
+        "upload.html", form=form, readiness=_readiness(), subjects=bank.subjects(),
+        subject=subject, exam_types=bank.EXAM_TYPES,
+        counts=bank.exam_counts(subject["id"]) if subject else {},
+        bank_questions=bank.questions(subject["id"], exam) if subject else [],
+    ), status
+
+
 @bp.route("/upload", methods=("GET", "POST"))
 @login_required
 def new():
     if request.method == "GET":
-        return render_template("upload.html", form={}, readiness=_readiness())
+        # Which of the subject's exams is being graded, kept across the reload
+        # that picking a subject, exam or bank question does.
+        question_mode = request.args.get("question_mode", "single")
+        if question_mode not in ("single", "multiple"):
+            question_mode = "single"
+        student_mode = request.args.get("student_mode", "multiple")
+        if student_mode not in ("single", "multiple"):
+            student_mode = "multiple"
+        form = {
+            "exam_type": bank.exam_type(request.args.get("exam")),
+            "question_mode": question_mode,
+            "student_mode": student_mode,
+            "question_text": "",
+        }
+        subject = bank.owned_subject(request.args.get("subject", type=int), missing=None)
+        if subject is not None:
+            form.update(subject_id=subject["id"], rubric=subject["rubric"] or "")
+            question_id = request.args.get("question", type=int)
+            if question_id:
+                question = bank.owned_question(subject["id"], question_id)
+                form.update(bank_form(subject, question))
+                form["bank_question"] = question["id"]
+        return _render(form)
 
+    subject = bank.owned_subject(request.form.get("subject_id", type=int), missing=None)
+    question_mode = request.form.get("question_mode") or "auto"
+    student_mode = request.form.get("student_mode") or "auto"
+    bank_question = request.form.get("bank_question", type=int)
+    if question_mode == "multiple":
+        bank_question = None
     form = {
+        "subject_id": subject["id"] if subject else None,
+        "bank_question": bank_question,
         "ideal_answer": (request.form.get("ideal_answer") or "").strip(),
         "ideal_source": request.form.get("ideal_source"),
+        "question_text": (request.form.get("question_text") or "").strip(),
         "rubric": (request.form.get("rubric") or "").strip(),
         "max_score": (request.form.get("max_score") or "10").strip(),
         "parts": _part_rows(),
+        "exam_type": bank.exam_type(request.form.get("exam_type")),
+        "question_mode": question_mode if question_mode in ("single", "multiple") else "single",
+        "student_mode": student_mode if student_mode in ("single", "multiple") else "multiple",
     }
-    upload = request.files.get("file")
+    # One class list, or several files at once (lists or answer papers).
+    uploads = [f for f in request.files.getlist("file") if f and f.filename]
 
     errors = []
+    if question_mode not in ("single", "multiple", "auto"):
+        errors.append(_("Choose single question or multiple questions."))
+        form["question_mode"] = "single"
+    if student_mode not in ("single", "multiple", "auto"):
+        errors.append(_("Choose one student or multiple students."))
+        form["student_mode"] = "multiple"
     parts, error = _parts(form["parts"])
     if error:
         errors.append(error)
@@ -173,52 +274,114 @@ def new():
         if error:
             errors.append(error)
 
-    data = upload.read() if upload else b""
-    if len(data) > MAX_UPLOAD_BYTES:
-        errors.append(_("That file is larger than 8 MB."))
+    files = [(f.filename, f.read()) for f in uploads]
+    for filename, data in files:
+        if len(data) > MAX_UPLOAD_BYTES:
+            errors.append(_("'%(name)s' is larger than 8 MB.", name=filename))
 
     exam = None
     if not errors:
         try:
-            exam = parse_exam(
-                upload.filename if upload else "",
-                data,
-                max_rows=int(current_app.config.get("MAX_ROWS", 500)),
+            # Answer papers are split into as many answers as the chosen exam
+            # of the bank has questions (unless one bank question is chosen).
+            question_count = None
+            if subject and not form["bank_question"] and question_mode == "auto":
+                question_count = bank.exam_counts(subject["id"])[form["exam_type"]] or None
+            elif subject and not form["bank_question"] and question_mode == "multiple":
+                bank_count = bank.exam_counts(subject["id"])[form["exam_type"]]
+                question_count = bank_count if bank_count > 1 else None
+            exam = parse_submissions(
+                files, max_rows=int(current_app.config.get("MAX_ROWS", 500)),
+                question_count=question_count,
             )
         except ParseError as exc:
             errors.append(str(exc))
+
+    if exam is not None:
+        question_total = len(exam["questions"])
+        if question_mode == "single" and question_total > 1:
+            errors.append(_(
+                "This upload contains multiple questions. Choose Multiple questions, "
+                "or upload a single-question file."
+            ))
+        elif question_mode == "multiple" and question_total < 2:
+            errors.append(_(
+                "Only one question was found. Choose Single question, or upload an "
+                "exam with at least two questions."
+            ))
+        student_total = len(exam["students"])
+        if student_mode == "single" and student_total != 1:
+            errors.append(_(
+                "This upload contains %(count)s students. Choose Multiple students, "
+                "or upload one student's responses.", count=student_total
+            ))
+        elif student_mode == "multiple" and student_total < 2:
+            errors.append(_(
+                "Only one student was found. Choose One student, or upload responses "
+                "for at least two students."
+            ))
 
     # A multi-question file gets its ideal answers on the next page, one per
     # question, so the single ideal answer on this page is not needed.
     multi = exam is not None and len(exam["questions"]) > 1
     ideal_answer = None
-    if not multi:
+    if not multi and question_mode != "multiple":
         ideal_answer, error = _ideal_answer(
             form["ideal_answer"], request.files.get("reference"), form["ideal_source"]
         )
         if error:
             errors.append(error)
-
     if errors:
         for message in errors:
             flash(message, "danger")
-        return render_template("upload.html", form=form, readiness=_readiness()), 400
+        return _render(form, 400)
 
     parts_json = json.dumps(parts, ensure_ascii=False) if parts else None
     students = exam["students"]
     db = get_db()
+    # Graded from a bank question: keep what it asked, for the review panel.
+    banked = None
+    if subject and form["bank_question"] and not multi:
+        banked = db.execute(
+            "SELECT * FROM bank_question WHERE id = ? AND subject_id = ? AND exam_type = ?",
+            (form["bank_question"], subject["id"], form["exam_type"]),
+        ).fetchone()
+        if banked is None:
+            abort(400)
+
+    if subject and not multi and not form["question_text"]:
+        form["question_text"] = banked["text"] if banked else exam["questions"][0]
+
+    bank_saved = False
+    if subject and not multi:
+        question_text = form["question_text"] or (banked["text"] if banked else "")
+        if not question_text:
+            question_text = exam["questions"][0]
+        bank_saved = save_bank_question(
+            subject, form["exam_type"],
+            banked["position"] if banked else bank.next_position(subject["id"], form["exam_type"]),
+            question_text, banked["options"] if banked else None,
+            ideal_answer, form["rubric"], max_score, parts_json,
+            banked["id"] if banked else None,
+        )
+
     cursor = db.execute(
         """INSERT INTO assignment
-           (instructor_id, title, ideal_answer, rubric, max_score, parts, status,
-            progress_total)
-           VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)""",
+           (instructor_id, subject_id, title, ideal_answer, rubric, max_score, parts,
+            question_text, question_options, exam_type, status, progress_total)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
         (
             g.instructor["id"],
-            upload.filename,
+            subject["id"] if subject else None,
+            files[0][0] if len(files) == 1 else _(
+                "%(first)s and %(count)s more", first=files[0][0], count=len(files) - 1),
             ideal_answer or "",
             form["rubric"] or None,
             max_score,
             None if multi else parts_json,
+            form["question_text"] or (banked["text"] if banked else None),
+            banked["options"] if banked else None,
+            form["exam_type"] if subject else None,
             len(students) * len(exam["questions"]),
         ),
     )
@@ -255,6 +418,12 @@ def new():
         )
         return redirect(url_for("upload.questions", assignment_id=assignment_id))
 
+    if bank_saved:
+        flash(_("Added this question to the %(subject)s question bank.",
+                subject=subject["name"]), "success")
+    elif subject:
+        flash(_("Saved this question to the %(subject)s question bank.",
+                subject=subject["name"]), "success")
     return _start(assignment_id, len(students))
 
 
@@ -279,20 +448,33 @@ def questions(assignment_id):
     if not rows:
         abort(404)
 
+    # With a subject, question N of the file starts from question N of its bank.
+    subject = bank.owned_subject(assignment["subject_id"], missing=None)
+    banked = {}
+    if subject is not None:
+        exam = bank.exam_type(assignment["exam_type"])
+        banked = {b["position"]: b for b in bank.questions(subject["id"], exam)}
+
     if request.method == "GET":
         form = {}
         for q in rows:
             suffix = "_" + str(q["id"])
+            source = banked.get(q["position"])
+            form["question_text" + suffix] = source["text"] if source else q["title"]
             form["rubric" + suffix] = q["rubric"] or ""
             form["max_score" + suffix] = "%g" % q["max_score"]
             form["parts" + suffix] = _parts_from_json(q["parts"])
+            if source:
+                form.update(bank_form(subject, source, suffix))
         return render_template(
-            "questions.html", assignment=assignment, questions=rows, form=form
+            "questions.html", assignment=assignment, questions=rows, form=form,
+            subject=subject, banked=banked,
         )
 
     form = {key: (value or "").strip() for key, value in request.form.items()}
     errors = []
     updates = []
+    bank_updates = []
     for q in rows:
         suffix = "_" + str(q["id"])
         form["parts" + suffix] = _part_rows(suffix)
@@ -313,27 +495,48 @@ def questions(assignment_id):
                     "Question %(number)s (%(title)s): %(error)s",
                     number=q["position"], title=q["title"], error=error,
                 ))
+        source = banked.get(q["position"])
+        question_text = form.get("question_text" + suffix, "").strip()
+        if not question_text:
+            question_text = source["text"] if source else q["title"]
+        rubric = form.get("rubric" + suffix) or None
+        parts_json = json.dumps(parts, ensure_ascii=False) if parts else None
         updates.append((
-            ideal, form.get("rubric" + suffix) or None, max_score,
-            json.dumps(parts, ensure_ascii=False) if parts else None, q["id"],
+            ideal, rubric, max_score, parts_json, question_text,
+            source["options"] if source else None,
+            q["id"],
         ))
+        if subject and question_text:
+            bank_updates.append((
+                q["position"], question_text, source["options"] if source else None,
+                ideal, rubric, max_score, parts_json, source["id"] if source else None,
+            ))
 
     if errors:
         for message in errors:
             flash(message, "danger")
         return render_template(
-            "questions.html", assignment=assignment, questions=rows, form=form
+            "questions.html", assignment=assignment, questions=rows, form=form,
+            subject=subject, banked=banked,
         ), 400
 
     db.executemany(
-        "UPDATE question SET ideal_answer = ?, rubric = ?, max_score = ?, parts = ? "
-        "WHERE id = ?",
+        "UPDATE question SET ideal_answer = ?, rubric = ?, max_score = ?, parts = ?, "
+        "question_text = ?, question_options = ? WHERE id = ?",
         updates,
     )
+    for position, text, options, ideal, rubric, max_score, parts_json, question_id in bank_updates:
+        save_bank_question(
+            subject, bank.exam_type(assignment["exam_type"]), position, text, options,
+            ideal, rubric, max_score, parts_json, question_id,
+        )
     # The assignment's maximum is the whole exam's, so totals read against it.
     db.execute(
         "UPDATE assignment SET max_score = ? WHERE id = ?",
         (sum(u[2] for u in updates), assignment_id),
     )
     db.commit()
+    if subject:
+        flash(_("Saved the reviewed questions to the %(subject)s question bank.",
+                subject=subject["name"]), "success")
     return _start(assignment_id, assignment["progress_total"])

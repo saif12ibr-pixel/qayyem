@@ -10,6 +10,8 @@ DROP TABLE IF EXISTS grading_result;
 DROP TABLE IF EXISTS student_response;
 DROP TABLE IF EXISTS question;
 DROP TABLE IF EXISTS assignment;
+DROP TABLE IF EXISTS bank_question;
+DROP TABLE IF EXISTS subject;
 DROP TABLE IF EXISTS instructor;
 
 CREATE TABLE instructor (
@@ -26,16 +28,53 @@ CREATE TABLE instructor (
     created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- A course the instructor teaches. Subjects and their question banks are the
+-- instructor's own teaching material, not student data, so unlike assignments
+-- they are kept across sessions.
+CREATE TABLE subject (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    instructor_id INTEGER NOT NULL REFERENCES instructor(id) ON DELETE CASCADE,
+    name          TEXT NOT NULL,
+    code          TEXT,
+    -- Grading guidelines every question of the subject starts from.
+    rubric        TEXT,
+    created_at    TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- A subject's question bank, typed in or imported from a Word file.
+CREATE TABLE bank_question (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    subject_id   INTEGER NOT NULL REFERENCES subject(id) ON DELETE CASCADE,
+    -- Which of the subject's exams it belongs to: assignment, quiz, midterm
+    -- or final. Positions count from 1 within each.
+    exam_type    TEXT NOT NULL DEFAULT 'assignment',
+    position     INTEGER NOT NULL,
+    text         TEXT NOT NULL,
+    -- MSQ choices: JSON [{"label", "text", "correct"}]; NULL when open.
+    options      TEXT,
+    ideal_answer TEXT,
+    rubric       TEXT,
+    max_score    REAL NOT NULL DEFAULT 1,
+    parts        TEXT
+);
+
 CREATE TABLE assignment (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     instructor_id  INTEGER NOT NULL REFERENCES instructor(id) ON DELETE CASCADE,
+    subject_id     INTEGER REFERENCES subject(id) ON DELETE SET NULL,
     title          TEXT NOT NULL,
     ideal_answer   TEXT NOT NULL,
     rubric         TEXT,
     max_score      REAL NOT NULL DEFAULT 10,
     -- Marking scheme as JSON [{"name", "marks"}], when marked in parts.
     parts          TEXT,
-    status         TEXT NOT NULL DEFAULT 'pending'
+    -- The question itself, copied from the bank question it was graded
+    -- from, so reviewers see what was asked. Choices as in bank_question.
+    question_text    TEXT,
+    question_options TEXT,
+    -- The subject exam it was graded for (as bank_question.exam_type).
+    exam_type      TEXT,
+    status        TEXT NOT NULL DEFAULT 'pending'
                    CHECK (status IN ('pending','grading','complete','failed')),
     progress_done  INTEGER NOT NULL DEFAULT 0,
     progress_total INTEGER NOT NULL DEFAULT 0,
@@ -55,7 +94,9 @@ CREATE TABLE question (
     ideal_answer  TEXT,
     rubric        TEXT,
     max_score     REAL NOT NULL DEFAULT 10,
-    parts         TEXT
+    parts         TEXT,
+    question_text    TEXT,
+    question_options TEXT
 );
 
 CREATE TABLE student_response (
@@ -77,9 +118,15 @@ CREATE TABLE grading_result (
     error       TEXT,
     -- JSON list of per-part scores, in the marking scheme's order.
     part_scores TEXT,
+    -- Set when the instructor changes the grade on the results page; ai_score
+    -- keeps what the model gave, for the record.
+    reviewed_at TEXT,
+    ai_score    REAL,
     graded_at   TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_assignment_instructor ON assignment(instructor_id);
 CREATE INDEX idx_response_assignment   ON student_response(assignment_id);
 CREATE INDEX idx_question_assignment   ON question(assignment_id);
+CREATE INDEX idx_subject_instructor    ON subject(instructor_id);
+CREATE INDEX idx_bank_subject          ON bank_question(subject_id);
