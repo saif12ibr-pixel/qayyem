@@ -1,5 +1,5 @@
-QAYYEM - SETUP INSTRUCTIONS (ENGLISH)
-=====================================
+QAYYEM - INSTALLATION, CONFIGURATION AND SETUP GUIDE (ENGLISH)
+=============================================================
 
 Qayyem is a web application that grades short Arabic assignment answers using
 AI and writes individual Arabic feedback for each student.
@@ -10,29 +10,38 @@ BEFORE YOU START
 
 Read PREREQUISITES/PREREQUISITES.txt. You need two things:
 
-  1. Python 3.12 installed from python.org (tick "Add python.exe to PATH")
-  2. A free API key from https://aistudio.google.com/apikey
+  1. Python 3.12, 3.13 or 3.14 installed from python.org
+     (tick "Add python.exe to PATH" during installation)
+  2. An AI API key. The default, Google Gemini, is free:
+     https://aistudio.google.com/apikey
 
 
 OPTION A - THE EASY WAY (WINDOWS)
 ---------------------------------
 
   1. Open the SOURCE folder.
-  2. Double-click run.bat
-  3. The first run creates a file called .env and then stops.
-     Open SOURCE\.env in Notepad and paste your key after GEMINI_API_KEY=
-     so the line reads, for example:
 
-         GEMINI_API_KEY=AIzaSy...your-key-here
+  2. Double-click run.bat. It will:
+       - create a virtual environment (.venv)
+       - install the dependencies
+       - create the configuration file .env from .env.example
+       - create the database
+       - start the server and open the browser on the sign-up page
 
-     Save and close the file.
-  4. Double-click run.bat again.
-  5. It will ask you to create your instructor login. Enter an email address
-     and a password of at least 8 characters.
-  6. Open http://127.0.0.1:5000 in your browser and sign in.
+  3. Create your instructor account on the sign-up page: full name, e-mail
+     address and a password of at least 8 characters.
+
+  4. Add an AI key, in either of two ways:
+       a) In the app: open Settings, choose the provider (Gemini by default),
+          paste your key and press "Test connection". The key is stored
+          encrypted and only applies to your account.
+       b) For everyone on this server: open SOURCE\.env in Notepad, paste the
+          key after GEMINI_API_KEY= , save, then stop and restart run.bat.
 
   To stop the server, press Ctrl+C in the black window.
-  To start it again later, just double-click run.bat.
+  To start it again later, double-click run.bat. Each start installs any new
+  dependencies and upgrades the database, keeping every account, subject and
+  question bank.
 
 
 OPTION B - MANUAL SETUP (ANY OPERATING SYSTEM)
@@ -50,60 +59,107 @@ Open a terminal in the SOURCE folder and run:
 
          pip install -r requirements.txt
 
-  3. Create the configuration file and add your key:
+  3. Create the configuration file:
 
          copy .env.example .env          (Windows)
          cp .env.example .env            (macOS / Linux)
 
-     Then edit .env and set GEMINI_API_KEY to your key.
+     Optionally set GEMINI_API_KEY in .env (see Configuration below).
 
   4. Create the database:
 
          flask --app app init-db
 
-  5. Create your instructor account:
+     WARNING: init-db erases an existing database. Run it only once.
 
-         flask --app app create-instructor
-
-  6. Start the server:
+  5. Start the server:
 
          flask --app app run
 
-  7. Open http://127.0.0.1:5000
+  6. Open http://127.0.0.1:5000/signup and create your instructor account.
+     (If sign-up is turned off, create accounts from the terminal instead:
+      flask --app app create-instructor)
+
+
+CONFIGURATION (.env)
+--------------------
+
+All settings live in SOURCE/.env. The main ones:
+
+  GEMINI_API_KEY          Server-wide Gemini key (optional if every instructor
+                          adds their own key under Settings)
+  GEMINI_MODEL            Gemini model to use
+  OPENAI_API_KEY,         Server-wide keys for the optional paid providers
+  ANTHROPIC_API_KEY,
+  DEEPSEEK_API_KEY
+  SECRET_KEY              Signs sessions and encrypts stored API keys. Set it
+                          to a long random value BEFORE first use; changing it
+                          later makes saved API keys unreadable, and instructors
+                          must enter them again under Settings.
+  SIGNUP_ENABLED          1 = instructors can create accounts (default),
+                          0 = only accounts made with create-instructor
+  SIGNUP_EMAIL_DOMAINS    Limit sign-up to these e-mail domains, e.g. seu.edu.sa
+  SESSION_TIMEOUT_MINUTES Inactivity before sign-out (default 30)
+  GRADING_BATCH_SIZE      Answers sent per AI request (default 10)
+  MAX_ROWS                Largest upload accepted (default 500 rows)
+
+Restart the server after changing .env.
 
 
 USING THE APPLICATION
 ---------------------
 
-  1. Sign in with the account you created.
+  1. Sign in.
 
-  2. Prepare a CSV or Excel file with two columns: a student ID column and a
-     response column. English or Arabic headings both work:
+  2. (Optional) Open Subjects and add a subject. Each subject has grading
+     guidelines and a question bank (Assignment, Quiz, Midterm, Final).
+     Questions can be typed in or imported from the Word file of an exam.
 
-         student_id,response              or      الرقم الجامعي,الإجابة
-         S220001,الإجابة الأولى...                  S220001,الإجابة الأولى...
+  3. Open New grading and prepare the answers. Two kinds of file work:
+
+       a) A class file (CSV, Excel or a Word table) with a student ID column
+          and an answer column. English or Arabic headings both work:
+
+              student_id,response        or     الرقم الجامعي,الإجابة
+              S220001,الإجابة الأولى...           S220001,الإجابة الأولى...
+
+          A whole exam uses one answer column per question.
+
+       b) Answer papers: one .docx, .pdf or .txt file per student. The student
+          ID is read from the top of the file or from its file name.
 
      A ready-made example is in SOURCE/sample_data/sample_responses.csv
+     with its ideal answer in SOURCE/sample_data/ideal_answer.txt
 
-  3. Upload the file, paste the ideal answer, and optionally a grading rubric.
-     Supplying a rubric noticeably improves consistency, so it is worth a
-     sentence or two. Set the maximum score, then click "Grade responses".
+  4. Enter the ideal answer (type it, upload a book or slides as reference
+     material, or choose the subject to load it from the question bank), the
+     maximum score, and optionally a rubric and a split of the marks into
+     parts. A rubric noticeably improves consistency. Start grading.
 
-  4. A progress bar appears while grading runs. The page updates itself.
+  5. A progress bar shows grading in the background. You can leave the page
+     and come back.
 
-  5. When it finishes, review the scores and Arabic feedback in the table, then
-     click "Download Excel" to save the results.
+  6. On the results page:
+       - read the class summary: average, top 5, highest and lowest, and the
+         low / average / high student groups
+       - press Review on any answer to change its score or feedback
+         (the original AI score is kept)
+       - search for a student by ID
+       - press Download Excel for the whole class, or download one student's
+         file from the student search
 
-     The Excel file has two sheets: "Results" (one row per student) and
-     "Assignment" (the ideal answer, rubric, averages and the model used).
+     The class Excel file has two sheets: "Results" (one row per student) and
+     "Assignment" (title, date, maximum score, number of responses, average,
+     model used, ideal answer and rubric).
 
 
 IMPORTANT - STUDENT DATA IS NOT KEPT
 ------------------------------------
 
-Student responses and grades are deleted when you sign out or when your session
+Student answers and grades are deleted when you sign out or when your session
 expires after 30 minutes of inactivity. This is deliberate, to comply with the
-Saudi Personal Data Protection Law.
+Saudi Personal Data Protection Law. Subjects and question banks are teaching
+material and are kept.
 
   ==> ALWAYS DOWNLOAD THE EXCEL FILE BEFORE SIGNING OUT.
 
@@ -114,9 +170,11 @@ warns you first.
 RUNNING THE TESTS
 -----------------
 
+In the SOURCE folder, with the virtual environment active:
+
       python -m pytest
 
-All 65 tests run offline and need no API key and no internet connection.
+All 656 tests run offline and need no API key and no internet connection.
 
 
 TROUBLESHOOTING
@@ -126,20 +184,25 @@ TROUBLESHOOTING
       Install Python from python.org, not from the Microsoft Store, and tick
       "Add python.exe to PATH" during setup.
 
-"GEMINI_API_KEY is not set"
-      Open SOURCE\.env and paste your key after GEMINI_API_KEY=
+Installing the dependencies fails
+      Check the Python version with "python --version". Use 3.12, 3.13 or
+      3.14. Delete the .venv folder and run run.bat again.
+
+"No API key is available ..." / grading does not start
+      Add a key under Settings, or set GEMINI_API_KEY in SOURCE\.env and
+      restart the server.
 
 "API rejected the key (400/401/403)"
-      The key is wrong or has been revoked. Generate a new one at
-      https://aistudio.google.com/apikey
+      The key is wrong or has been revoked. Generate a new one and use
+      Settings > Test connection to check it.
 
 "Model ... was not found"
-      Your key cannot use that model. Open .env and change GEMINI_MODEL to a
-      model your account has access to.
+      Your key cannot use that model. In Settings press Refresh to list the
+      models your key can use, and choose one.
 
 "Rate limited by the API (429)"
-      The free tier has an hourly request limit. Wait a few minutes, or lower
-      GRADING_BATCH_SIZE in .env so fewer, larger calls are made.
+      The free tier limits how many requests can be made. Wait a few minutes
+      and resume; the uploaded answers are kept.
 
 "Could not find a response column"
       The column headings were not recognised. Rename them to student_id and
@@ -159,3 +222,4 @@ SUPPORT
 
 Qayyem - Senior Project II (CS489)
 College of Computing & Informatics, Prince Musaid bin Abdulrahman University
+Supervisor: Dr. Saeed AlQarni

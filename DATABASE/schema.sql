@@ -45,9 +45,12 @@ CREATE TABLE subject (
 CREATE TABLE bank_question (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     subject_id   INTEGER NOT NULL REFERENCES subject(id) ON DELETE CASCADE,
+    -- Which of the subject's exams it belongs to: assignment, quiz, midterm
+    -- or final. Positions count from 1 within each.
+    exam_type    TEXT NOT NULL DEFAULT 'assignment',
     position     INTEGER NOT NULL,
     text         TEXT NOT NULL,
-    -- Multiple choice: JSON [{"label", "text", "correct"}]; NULL when written.
+    -- MSQ choices: JSON [{"label", "text", "correct"}]; NULL when open.
     options      TEXT,
     ideal_answer TEXT,
     rubric       TEXT,
@@ -69,6 +72,8 @@ CREATE TABLE assignment (
     -- from, so reviewers see what was asked. Choices as in bank_question.
     question_text    TEXT,
     question_options TEXT,
+    -- The subject exam it was graded for (as bank_question.exam_type).
+    exam_type      TEXT,
     status        TEXT NOT NULL DEFAULT 'pending'
                    CHECK (status IN ('pending','grading','complete','failed')),
     progress_done  INTEGER NOT NULL DEFAULT 0,

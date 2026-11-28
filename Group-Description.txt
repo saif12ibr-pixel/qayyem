@@ -1,0 +1,23 @@
+GROUP DESCRIPTION
+=================
+
+1. Group members (full names) and 2. Student IDs
+
+   Saif Amro Ibrahim                  S220008133
+   Houmood Abdulrahman Algoseyer      S230050613
+   Meshari Abdulrahman Alasmari       S220044964
+   Salman Ahmed Alharbi               S220042990
+   Mohammed Jamman Alomari            S220002979
+   Sultan Bander Altowirgi            S220037005
+
+3. Graduation project title
+
+   Qayyem (قيّم): AI-Powered Arabic Assignment Grading and Feedback System
+
+4. Supervisor
+
+   Dr. Saeed AlQarni
+
+Course:     Senior Project II (CS489)
+College:    College of Computing & Informatics
+University: Prince Musaid bin Abdulrahman University

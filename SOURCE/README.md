@@ -88,7 +88,7 @@ upload  ->  parse/validate  ->  persist  ->  background worker  ->  poll status
                                                   |
                                           batches of 10 responses
                                                   |
-                                            Gemini API (JSON)
+                         AI provider (Gemini, OpenAI, Claude or DeepSeek)
                                                   |
                                        validate + store per student
                                                   |
@@ -110,32 +110,49 @@ request, and the results page polls `/results/<id>/status` to show progress.
 ```
 app.py                 Flask application factory and entry point
 config.py              Configuration, read from .env
+run.bat                One-click Windows launcher
 qayyem/
-  db.py, schema.sql    SQLite access, schema, admin CLI
+  db.py, schema.sql    SQLite access, schema, upgrades, admin CLI
   auth.py              Sign-up, login, session expiry, retention purge
+  security.py          CSRF protection and login lockout
+  crypto.py            Fernet encryption of instructors' API keys
+  settings.py          Provider, model and API key settings, connection test
   upload.py            Upload and start grading
-  results.py           Dashboard, reviewing grades, status polling, Excel download
-  subjects.py, bank.py Subjects and their question banks
-  question_doc.py      Reads questions and starred answers from Word
-  parsing.py           CSV/Excel reading, encoding and header handling
+  parsing.py           CSV/Excel/Word tables and answer papers, encodings, headers
+  reference.py         Ideal answer from books and slides (PDF, PowerPoint, Word, text)
+  results.py           Dashboard, class overview, student search, review, Excel download
   export.py            Excel generation with right-to-left Arabic
   jobs.py              Background grading worker and progress
+  subjects.py, bank.py Subjects and their question banks
+  question_doc.py      Reads questions and starred answers from Word
+  question_ai.py       AI reading of exam Word files for the question bank
+  i18n.py,
+  translations_ar.py   Arabic / English interface
   grading/
     base.py            The Grader interface
     prompt.py          Prompt construction and reply validation
-    gemini.py          Gemini implementation
+    gemini.py          Google Gemini (default)
+    openai.py          OpenAI GPT-4o
+    claude.py          Anthropic Claude
+    deepseek.py        DeepSeek
     fake.py            Offline grader — TESTS ONLY
-    factory.py         Chooses the grader from configuration
-templates/  static/    Server-rendered UI (Bootstrap 5)
+    factory.py         Chooses the grader from settings and configuration
+templates/  static/    Server-rendered UI (Bootstrap 5, LTR and RTL, bundled locally)
 tests/                 pytest suite
+benchmark/             Performance benchmark and its recorded results
 sample_data/           Demonstration data
 ```
 
 ## Changing the AI provider
 
-Only `qayyem/grading/` knows a provider exists. To swap models, set
-`GEMINI_MODEL` in `.env`; to swap providers, add one file implementing `Grader`
-and register it in `factory.py`.
+Each instructor chooses the provider and model under **Settings** and can add
+their own API key, which is stored encrypted and never sent back to the
+browser. **Test connection** grades one sample answer and **Refresh** lists the
+models the key can use. Without a personal key, the server-wide key from
+`.env` is used.
+
+Only `qayyem/grading/` knows a provider exists. To add a new provider, add one
+file implementing `Grader` and register it in `factory.py`.
 
 > **`GRADER=fake` performs no AI inference.** It scores by word overlap and
 > exists so the test suite runs offline at no cost. Never present its output as
@@ -154,7 +171,8 @@ have not downloaded, the app warns you first.
 python -m pytest
 ```
 
-65 tests, all offline — parsing (including UTF-8 BOM and windows-1256 Arabic),
-prompt construction, reply validation, authentication, ownership enforcement,
-session expiry, the retention purge, Excel output, and the full
-upload→grade→download flow.
+656 tests, all offline — parsing (including UTF-8 BOM and windows-1256 Arabic),
+answer papers and exam files, prompt construction, reply validation, all four
+providers, encrypted keys, authentication, CSRF and login lockout, ownership
+enforcement, session expiry, the retention purge, subjects and question banks,
+the Arabic interface, Excel output, and the full upload→grade→download flow.
